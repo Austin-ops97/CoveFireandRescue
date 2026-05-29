@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/site/Button";
+import { Modal } from "@/components/ui/Modal";
 import {
   findTemplateField,
   getAttentionAnswers,
@@ -60,123 +61,114 @@ export function SubmissionDetailModal({
     ...submission.answers.flatMap((answer) => answer.photoFileIds ?? []),
   ];
 
+  const description = [
+    formatTimestamp(submission.submittedAt),
+    submission.relatedFleetUnitName,
+    submission.submittedByName,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="submission-detail-title"
-      onClick={onClose}
+    <Modal
+      title={submission.templateName}
+      description={description}
+      onClose={onClose}
+      size="lg"
+      footer={
+        <Button type="button" variant="outline" size="sm" onClick={onClose}>
+          Close
+        </Button>
+      }
     >
-      <div
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-t-xl border border-gray-200 bg-white p-6 shadow-lg sm:rounded-xl"
-        onClick={(event) => event.stopPropagation()}
-        role="document"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 id="submission-detail-title" className="text-lg font-bold text-brand-charcoal">
-              {submission.templateName}
-            </h2>
-            <p className="mt-1 text-sm text-brand-gray">
-              {formatTimestamp(submission.submittedAt)}
-              {submission.relatedFleetUnitName
-                ? ` · ${submission.relatedFleetUnitName}`
-                : ""}
-              {submission.submittedByName ? ` · ${submission.submittedByName}` : ""}
-            </p>
-          </div>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            Close
-          </Button>
+      {hasAttention && attentionItems.length > 0 && (
+        <div className="rounded-lg border border-red-200/80 bg-red-50/80 p-4">
+          <p className="text-sm font-semibold text-red-950">Items needing attention</p>
+          <ul className="mt-2 space-y-1.5 text-sm text-red-900">
+            {attentionItems.map((item) => (
+              <li key={item.fieldId}>
+                {item.label}: {formatAnswerValue(item.value)}
+              </li>
+            ))}
+          </ul>
         </div>
+      )}
 
-        {hasAttention && attentionItems.length > 0 && (
-          <div className="mt-4 rounded-md border border-red-200 bg-red-50/60 p-3">
-            <p className="text-sm font-semibold text-red-900">Items needing attention</p>
-            <ul className="mt-2 space-y-1 text-sm text-red-900">
-              {attentionItems.map((item) => (
-                <li key={item.fieldId}>
-                  {item.label}: {formatAnswerValue(item.value)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+      <div className="space-y-5">
+        {(template?.sections ?? []).map((section) => {
+          const sectionAnswers = answersBySection.get(section.id) ?? [];
+          if (sectionAnswers.length === 0) return null;
 
-        <div className="mt-4 space-y-4">
-          {(template?.sections ?? []).map((section) => {
-            const sectionAnswers = answersBySection.get(section.id) ?? [];
-            if (sectionAnswers.length === 0) return null;
+          return (
+            <div key={section.id}>
+              <p className="text-sm font-semibold text-brand-charcoal">{section.title}</p>
+              <ul className="mt-2 space-y-2 text-sm">
+                {sectionAnswers.map((answer) => {
+                  const fieldMatch = template ? findTemplateField(template, answer.fieldId) : null;
+                  const label = fieldMatch?.field.label ?? answer.fieldId;
 
-            return (
-              <div key={section.id}>
-                <p className="text-sm font-semibold text-brand-charcoal">{section.title}</p>
-                <ul className="mt-2 space-y-2 text-sm">
-                  {sectionAnswers.map((answer) => {
-                    const fieldMatch = template ? findTemplateField(template, answer.fieldId) : null;
-                    const label = fieldMatch?.field.label ?? answer.fieldId;
-
-                    return (
-                      <li key={answer.fieldId} className="rounded-md bg-brand-gray-light/30 px-2 py-1">
-                        <div className="flex flex-wrap justify-between gap-2">
-                          <span className="font-medium text-brand-charcoal">{label}</span>
-                          <span>{formatAnswerValue(answer.value)}</span>
+                  return (
+                    <li
+                      key={answer.fieldId}
+                      className="rounded-lg border border-gray-100 bg-brand-gray-light/40 px-3 py-2"
+                    >
+                      <div className="flex flex-wrap justify-between gap-2">
+                        <span className="font-medium text-brand-charcoal">{label}</span>
+                        <span className="text-brand-gray">{formatAnswerValue(answer.value)}</span>
+                      </div>
+                      {(answer.photoFileIds ?? []).length > 0 && (
+                        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                          {(answer.photoFileIds ?? []).map((fileId) => {
+                            const file = resolvedPhotos[fileId];
+                            if (!file?.publicUrl) return null;
+                            return (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                key={fileId}
+                                src={file.publicUrl}
+                                alt={label}
+                                className="aspect-video w-full rounded-lg object-cover"
+                              />
+                            );
+                          })}
                         </div>
-                        {(answer.photoFileIds ?? []).length > 0 && (
-                          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                            {(answer.photoFileIds ?? []).map((fileId) => {
-                              const file = resolvedPhotos[fileId];
-                              if (!file?.publicUrl) return null;
-                              return (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  key={fileId}
-                                  src={file.publicUrl}
-                                  alt={label}
-                                  className="aspect-video w-full rounded-md object-cover"
-                                />
-                              );
-                            })}
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            );
-          })}
-        </div>
-
-        {submission.notes && (
-          <div className="mt-4 border-t border-gray-100 pt-4">
-            <p className="text-sm font-semibold text-brand-charcoal">Notes</p>
-            <p className="mt-1 text-sm text-brand-gray">{submission.notes}</p>
-          </div>
-        )}
-
-        {allPhotoIds.length > 0 && (
-          <div className="mt-4 border-t border-gray-100 pt-4">
-            <p className="text-sm font-semibold text-brand-charcoal">Photos</p>
-            <div className="mt-2 grid gap-3 sm:grid-cols-2">
-              {allPhotoIds.map((fileId) => {
-                const file = resolvedPhotos[fileId];
-                if (!file?.publicUrl) return null;
-                return (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={fileId}
-                    src={file.publicUrl}
-                    alt="Checklist attachment"
-                    className="aspect-video w-full rounded-md object-cover"
-                  />
-                );
-              })}
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
-          </div>
-        )}
+          );
+        })}
       </div>
-    </div>
+
+      {submission.notes && (
+        <div className="mt-5 border-t border-gray-100 pt-5">
+          <p className="text-sm font-semibold text-brand-charcoal">Notes</p>
+          <p className="mt-1 text-sm leading-relaxed text-brand-gray">{submission.notes}</p>
+        </div>
+      )}
+
+      {allPhotoIds.length > 0 && (
+        <div className="mt-5 border-t border-gray-100 pt-5">
+          <p className="text-sm font-semibold text-brand-charcoal">Photos</p>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+            {allPhotoIds.map((fileId) => {
+              const file = resolvedPhotos[fileId];
+              if (!file?.publicUrl) return null;
+              return (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={fileId}
+                  src={file.publicUrl}
+                  alt="Checklist attachment"
+                  className="aspect-video w-full rounded-lg object-cover"
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }

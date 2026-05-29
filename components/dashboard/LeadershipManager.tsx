@@ -1,9 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge } from "@/components/site/Badge";
 import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
+import {
+  AlertBanner,
+  CheckboxField,
+  EmptyState,
+  InfoBanner,
+  ListToolbar,
+  SkeletonCardList,
+  StatusBadge,
+} from "@/components/ui";
+import { inputBase } from "@/lib/ui/classes";
 import {
   archiveLeadershipMember,
   fetchAdminLeadership,
@@ -43,14 +52,8 @@ function formatTimestamp(value: unknown): string {
   return "—";
 }
 
-function StatusBadge({ status }: { status: LeadershipMemberRecord["status"] }) {
-  const styles: Record<LeadershipMemberRecord["status"], string> = {
-    active: "bg-green-100 text-green-800",
-    inactive: "bg-amber-100 text-amber-900",
-    archived: "bg-brand-gray/20 text-brand-gray",
-  };
-
-  return <Badge label={getLeadershipStatusLabel(status)} className={styles[status]} />;
+function LeadershipStatusBadge({ status }: { status: LeadershipMemberRecord["status"] }) {
+  return <StatusBadge label={getLeadershipStatusLabel(status)} variant={status} />;
 }
 
 function recordToForm(record: LeadershipMemberRecord): LeadershipMemberFormState {
@@ -80,7 +83,7 @@ function validateForm(form: LeadershipMemberFormState): string | null {
   return null;
 }
 
-const inputClassName = "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm";
+const inputClassName = inputBase;
 
 export function LeadershipManager() {
   const [leadership, setLeadership] = useState<LeadershipMemberRecord[]>([]);
@@ -268,59 +271,37 @@ export function LeadershipManager() {
 
   return (
     <div className="space-y-8">
-      <Card className="border-l-4 border-l-brand-red">
-        <p className="text-sm text-brand-gray">
-          Only <strong className="text-brand-charcoal">active</strong> leadership records appear on
-          the public leadership page.
-        </p>
-      </Card>
+      <InfoBanner>
+        Only <strong className="font-medium text-brand-charcoal">active</strong> leadership records
+        appear on the public leadership page.
+      </InfoBanner>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-brand-charcoal">All leadership members</h2>
-          <p className="mt-1 text-sm text-brand-gray">
-            {loading ? "Loading…" : `${leadership.length} total`}
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={loading || refreshing}
-          onClick={() => void loadLeadership(true)}
-        >
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </Button>
-      </div>
+      <ListToolbar
+        title="All leadership members"
+        countLabel={loading ? undefined : `${leadership.length} total`}
+        onRefresh={() => void loadLeadership(true)}
+        refreshing={refreshing}
+        refreshDisabled={loading || refreshing}
+      />
 
-      {successMessage && (
-        <Card className="border-l-4 border-l-green-600 bg-green-50/50">
-          <p className="text-sm font-medium text-green-900">{successMessage}</p>
-        </Card>
-      )}
+      {successMessage && <AlertBanner variant="success">{successMessage}</AlertBanner>}
 
       {loadError && (
-        <Card className="border-l-4 border-l-brand-red bg-red-50/40">
-          <p className="text-sm font-medium text-brand-charcoal">Could not load leadership</p>
-          <p className="mt-1 text-sm text-brand-gray">{loadError}</p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => void loadLeadership(true)}
-          >
-            Try again
-          </Button>
-        </Card>
+        <AlertBanner
+          variant="error"
+          title="Could not load leadership"
+          onRetry={() => void loadLeadership(true)}
+        >
+          {loadError}
+        </AlertBanner>
       )}
 
       <Card>
-        <h2 className="text-lg font-bold text-brand-charcoal">
+        <h2 className="text-base font-semibold text-brand-charcoal">
           {editingId ? "Edit leadership member" : "New leadership member"}
         </h2>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="name" className="block text-sm font-semibold text-brand-charcoal">
@@ -462,15 +443,12 @@ export function LeadershipManager() {
             </div>
           </div>
 
-          <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-brand-charcoal">
-            <input
-              type="checkbox"
-              checked={form.active}
-              onChange={(event) => setForm((prev) => ({ ...prev, active: event.target.checked }))}
-              className="h-4 w-4 rounded border-gray-300 text-brand-red focus:ring-brand-red"
-            />
-            Active (eligible for public display when status is Active)
-          </label>
+          <CheckboxField
+            id="leadershipActive"
+            label="Active (eligible for public display when status is Active)"
+            checked={form.active}
+            onChange={(active) => setForm((prev) => ({ ...prev, active }))}
+          />
 
           <div className="space-y-3">
             <p className="text-sm font-semibold text-brand-charcoal">Leadership photo</p>
@@ -533,19 +511,13 @@ export function LeadershipManager() {
         </form>
       </Card>
 
-      {loading && !loadError && (
-        <Card>
-          <p className="text-sm text-brand-gray">Loading leadership members…</p>
-        </Card>
-      )}
+      {loading && !loadError && <SkeletonCardList count={3} />}
 
       {!loading && !loadError && leadership.length === 0 && (
-        <Card>
-          <h3 className="font-bold text-brand-charcoal">No leadership members yet</h3>
-          <p className="mt-2 text-sm text-brand-gray">
-            Add your first command staff profile using the form above.
-          </p>
-        </Card>
+        <EmptyState
+          title="No leadership members yet"
+          description="Add your first command staff profile using the form above."
+        />
       )}
 
       {!loading && !loadError && leadership.length > 0 && (
@@ -558,10 +530,10 @@ export function LeadershipManager() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <StatusBadge status={item.status} />
-                      <Badge label={item.rank} className="bg-brand-gray-light text-brand-charcoal" />
+                      <LeadershipStatusBadge status={item.status} />
+                      <StatusBadge label={item.rank} variant="neutral" />
                       {!item.active && item.status !== "archived" && (
-                        <Badge label="Inactive flag" className="bg-amber-50 text-amber-900" />
+                        <StatusBadge label="Inactive flag" variant="warning" />
                       )}
                     </div>
                     <h3 className="mt-2 text-lg font-bold text-brand-charcoal">{item.name}</h3>

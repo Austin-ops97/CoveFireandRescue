@@ -6,9 +6,15 @@
   --color-brand-charcoal: #1a1a1a;
   --color-brand-charcoal-light: #2d2d2d;
   --color-brand-gray: #6b7280;
-  --color-brand-gray-light: #f3f4f6;
+  --color-brand-gray-light: #f8f9fb;
   --color-brand-gold: #c9a227;
   --color-brand-gold-muted: #d4af37;
+
+  --radius-ui: 0.75rem;
+  --radius-ui-lg: 1rem;
+  --shadow-ui-sm: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-ui: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-ui-md: 0 4px 12px rgb(0 0 0 / 0.06);
 }
 
 html {
@@ -17,4 +23,15 @@ html {
 
 body {
   @apply bg-white text-brand-charcoal antialiased;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+::selection {
+  @apply bg-brand-red/15 text-brand-charcoal;
+}
+
+/* Consistent focus for native controls not wrapped by components */
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-brand-red) 40%, transparent);
+  outline-offset: 2px;
 }

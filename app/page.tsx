@@ -62,7 +62,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <SectionHeader
           title="Quick Actions"
           subtitle="Find what you need — contact, fleet, recruitment, and news."
@@ -86,7 +86,7 @@ export default function HomePage() {
       </section>
 
       <section className="bg-brand-gray-light">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <SectionHeader
             title="Latest Announcements"
             subtitle="Recent updates from Cove Fire & Rescue."
@@ -104,7 +104,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <SectionHeader
           title="Department Overview"
           subtitle="Dedicated volunteers protecting and serving our community."

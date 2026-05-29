@@ -91,21 +91,28 @@ export function DashboardModules() {
   });
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
       {visibleModules.map((module) => {
         const card = (
           <Card
             hover={Boolean(module.href)}
-            className={`flex h-full flex-col ${!module.href ? "opacity-95" : ""}`}
+            className={`group flex h-full flex-col ${!module.href ? "opacity-90" : ""}`}
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <h3 className="text-lg font-bold text-brand-charcoal">{module.title}</h3>
+              <h3 className="text-base font-semibold text-brand-charcoal group-hover:text-brand-red transition-colors duration-150">
+                {module.title}
+              </h3>
               <ModuleStatusBadge status={module.status} />
             </div>
-            <p className="mt-2 flex-1 text-sm text-brand-gray">{module.description}</p>
+            <p className="mt-2.5 flex-1 text-sm leading-relaxed text-brand-gray">
+              {module.description}
+            </p>
             {module.href && (
-              <span className="mt-4 inline-block text-sm font-semibold text-brand-red">
-                Open →
+              <span className="mt-5 inline-flex items-center text-sm font-semibold text-brand-red">
+                Open module
+                <span className="ml-1 transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden>
+                  →
+                </span>
               </span>
             )}
           </Card>
@@ -113,7 +120,7 @@ export function DashboardModules() {
 
         if (module.href) {
           return (
-            <Link key={module.title} href={module.href} className="block h-full">
+            <Link key={module.title} href={module.href} className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/40 focus-visible:ring-offset-2">
               {card}
             </Link>
           );

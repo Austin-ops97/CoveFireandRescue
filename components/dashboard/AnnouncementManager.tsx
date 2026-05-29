@@ -1,9 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge } from "@/components/site/Badge";
 import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
+import {
+  AlertBanner,
+  CheckboxField,
+  EmptyState,
+  InfoBanner,
+  ListToolbar,
+  SkeletonCardList,
+  StatusBadge,
+} from "@/components/ui";
+import { inputBase } from "@/lib/ui/classes";
 import {
   archiveAnnouncement,
   fetchAdminAnnouncements,
@@ -38,14 +47,10 @@ function formatTimestamp(value: unknown): string {
   return "—";
 }
 
-function StatusBadge({ status }: { status: AnnouncementRecord["status"] }) {
-  const styles: Record<AnnouncementRecord["status"], string> = {
-    draft: "bg-brand-gray-light text-brand-charcoal",
-    published: "bg-green-100 text-green-800",
-    archived: "bg-brand-gray/20 text-brand-gray",
-  };
-
-  return <Badge label={getStatusLabel(status)} className={styles[status]} />;
+function AnnouncementStatusBadge({ status }: { status: AnnouncementRecord["status"] }) {
+  const variant =
+    status === "published" ? "published" : status === "archived" ? "archived" : "draft";
+  return <StatusBadge label={getStatusLabel(status)} variant={variant} />;
 }
 
 function recordToForm(record: AnnouncementRecord): AnnouncementFormState {
@@ -165,62 +170,42 @@ export function AnnouncementManager() {
     }
   }
 
+  const fieldClass = inputBase;
+
   return (
     <div className="space-y-8">
-      <Card className="border-l-4 border-l-brand-red">
-        <p className="text-sm text-brand-gray">
-          Only <strong className="text-brand-charcoal">published</strong> announcements appear on
-          the public billboard page at <code className="text-xs">/announcements</code>. Drafts stay
-          internal until you publish them.
-        </p>
-      </Card>
+      <InfoBanner>
+        Only <strong className="font-medium text-brand-charcoal">published</strong> announcements
+        appear on the public billboard at <code className="text-xs">/announcements</code>. Drafts
+        stay internal until you publish them.
+      </InfoBanner>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-brand-charcoal">All announcements</h2>
-          <p className="mt-1 text-sm text-brand-gray">
-            {loading ? "Loading…" : `${announcements.length} total`}
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={loading || refreshing}
-          onClick={() => void loadAnnouncements(true)}
-        >
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </Button>
-      </div>
+      <ListToolbar
+        title="All announcements"
+        countLabel={loading ? undefined : `${announcements.length} total`}
+        onRefresh={() => void loadAnnouncements(true)}
+        refreshing={refreshing}
+        refreshDisabled={loading || refreshing}
+      />
 
-      {successMessage && (
-        <Card className="border-l-4 border-l-green-600 bg-green-50/50">
-          <p className="text-sm font-medium text-green-900">{successMessage}</p>
-        </Card>
-      )}
+      {successMessage && <AlertBanner variant="success">{successMessage}</AlertBanner>}
 
       {loadError && (
-        <Card className="border-l-4 border-l-brand-red bg-red-50/40">
-          <p className="text-sm font-medium text-brand-charcoal">Could not load announcements</p>
-          <p className="mt-1 text-sm text-brand-gray">{loadError}</p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => void loadAnnouncements(true)}
-          >
-            Try again
-          </Button>
-        </Card>
+        <AlertBanner
+          variant="error"
+          title="Could not load announcements"
+          onRetry={() => void loadAnnouncements(true)}
+        >
+          {loadError}
+        </AlertBanner>
       )}
 
       <Card>
-        <h2 className="text-lg font-bold text-brand-charcoal">
+        <h2 className="text-base font-semibold text-brand-charcoal">
           {editingId ? "Edit announcement" : "New announcement"}
         </h2>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
           <div>
             <label htmlFor="title" className="block text-sm font-semibold text-brand-charcoal">
               Title <span className="text-brand-red">*</span>
@@ -233,7 +218,7 @@ export function AnnouncementManager() {
               maxLength={140}
               value={form.title}
               onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className={fieldClass}
             />
           </div>
 
@@ -249,7 +234,7 @@ export function AnnouncementManager() {
               maxLength={5000}
               value={form.body}
               onChange={(event) => setForm((prev) => ({ ...prev, body: event.target.value }))}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className={fieldClass}
             />
           </div>
 
@@ -267,7 +252,7 @@ export function AnnouncementManager() {
                     category: event.target.value as AnnouncementFormState["category"],
                   }))
                 }
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className={fieldClass}
               >
                 {ANNOUNCEMENT_CATEGORIES.map((item) => (
                   <option key={item.value} value={item.value}>
@@ -289,7 +274,7 @@ export function AnnouncementManager() {
                     status: event.target.value as AnnouncementFormState["status"],
                   }))
                 }
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className={fieldClass}
               >
                 {ANNOUNCEMENT_STATUSES.map((item) => (
                   <option key={item.value} value={item.value}>
@@ -300,17 +285,14 @@ export function AnnouncementManager() {
             </div>
           </div>
 
-          <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-brand-charcoal">
-            <input
-              type="checkbox"
-              checked={form.pinned}
-              onChange={(event) => setForm((prev) => ({ ...prev, pinned: event.target.checked }))}
-              className="h-4 w-4 rounded border-gray-300 text-brand-red focus:ring-brand-red"
-            />
-            Pin to top of public billboard
-          </label>
+          <CheckboxField
+            id="announcementPinned"
+            label="Pin to top of public billboard"
+            checked={form.pinned}
+            onChange={(pinned) => setForm((prev) => ({ ...prev, pinned }))}
+          />
 
-          <div className="rounded-md border border-dashed border-brand-gray/40 bg-brand-gray-light/30 px-4 py-3 text-sm text-brand-gray">
+          <div className="rounded-lg border border-dashed border-gray-200 bg-brand-gray-light/50 px-4 py-3 text-sm text-brand-gray">
             Images will be added in the Backblaze B2 upload step.
           </div>
 
@@ -333,19 +315,13 @@ export function AnnouncementManager() {
         </form>
       </Card>
 
-      {loading && !loadError && (
-        <Card>
-          <p className="text-sm text-brand-gray">Loading announcements…</p>
-        </Card>
-      )}
+      {loading && !loadError && <SkeletonCardList count={3} />}
 
       {!loading && !loadError && announcements.length === 0 && (
-        <Card>
-          <h3 className="font-bold text-brand-charcoal">No announcements yet</h3>
-          <p className="mt-2 text-sm text-brand-gray">
-            Create your first draft or published post using the form above.
-          </p>
-        </Card>
+        <EmptyState
+          title="No announcements yet"
+          description="Create your first draft or published post using the form above."
+        />
       )}
 
       {!loading && !loadError && announcements.length > 0 && (
@@ -360,14 +336,9 @@ export function AnnouncementManager() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <StatusBadge status={item.status} />
-                      <Badge
-                        label={getCategoryLabel(item.category)}
-                        className="bg-brand-gray-light text-brand-charcoal"
-                      />
-                      {item.pinned && (
-                        <Badge label="Pinned" className="bg-brand-red/15 text-brand-red" />
-                      )}
+                      <AnnouncementStatusBadge status={item.status} />
+                      <StatusBadge label={getCategoryLabel(item.category)} variant="neutral" />
+                      {item.pinned && <StatusBadge label="Pinned" variant="admin" />}
                     </div>
                     <h3 className="mt-2 text-lg font-bold text-brand-charcoal">{item.title}</h3>
                     <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-brand-gray">

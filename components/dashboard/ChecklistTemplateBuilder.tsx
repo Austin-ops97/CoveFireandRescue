@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge } from "@/components/site/Badge";
 import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
 import {
@@ -24,7 +23,16 @@ import {
   type ChecklistTemplateSection,
 } from "@/lib/checklist/types";
 
-const inputClassName = "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm";
+import {
+  AlertBanner,
+  InfoBanner,
+  ListToolbar,
+  SkeletonCardList,
+  StatusBadge,
+} from "@/components/ui";
+import { inputBase } from "@/lib/ui/classes";
+
+const inputClassName = inputBase;
 
 function createField(sortOrder: number): ChecklistTemplateField {
   return {
@@ -374,43 +382,28 @@ export function ChecklistTemplateBuilder() {
 
   return (
     <div className="space-y-8">
-      <Card className="border-l-4 border-l-brand-red">
-        <p className="text-sm text-brand-gray">
-          Templates are reusable sheets. Members can select these forms when submitting inspections
-          for apparatus, stations, equipment, safety checks, and custom department needs.
-        </p>
-      </Card>
+      <InfoBanner>
+        Templates are reusable sheets. Members can select these forms when submitting inspections
+        for apparatus, stations, equipment, safety checks, and custom department needs.
+      </InfoBanner>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-brand-charcoal">Saved templates</h2>
-          <p className="mt-1 text-sm text-brand-gray">
-            {loading ? "Loading…" : `${templates.length} total`}
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={loading || refreshing}
-          onClick={() => void loadTemplates(true)}
-        >
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </Button>
-      </div>
+      <ListToolbar
+        title="Saved templates"
+        countLabel={loading ? undefined : `${templates.length} total`}
+        onRefresh={() => void loadTemplates(true)}
+        refreshing={refreshing}
+        refreshDisabled={loading || refreshing}
+      />
 
-      {successMessage && (
-        <Card className="border-l-4 border-l-green-600 bg-green-50/50">
-          <p className="text-sm font-medium text-green-900">{successMessage}</p>
-        </Card>
-      )}
+      {successMessage && <AlertBanner variant="success">{successMessage}</AlertBanner>}
 
       {loadError && (
-        <Card className="border-l-4 border-l-brand-red bg-red-50/40">
-          <p className="text-sm font-medium text-brand-charcoal">Could not load templates</p>
-          <p className="mt-1 text-sm text-brand-gray">{loadError}</p>
-        </Card>
+        <AlertBanner variant="error" title="Could not load templates">
+          {loadError}
+        </AlertBanner>
       )}
+
+      {loading && <SkeletonCardList count={2} />}
 
       <div className="grid gap-8 xl:grid-cols-[1.4fr_1fr]">
         <Card>
@@ -853,20 +846,16 @@ export function ChecklistTemplateBuilder() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge
+                      <StatusBadge
                         label={template.active ? "Active" : "Archived"}
-                        className={
-                          template.active
-                            ? "bg-green-100 text-green-800"
-                            : "bg-brand-gray/20 text-brand-gray"
-                        }
+                        variant={template.active ? "active" : "archived"}
                       />
-                      <Badge
+                      <StatusBadge
                         label={getChecklistScopeLabel(template.scope)}
-                        className="bg-brand-gray-light text-brand-charcoal"
+                        variant="neutral"
                       />
                       {!template.reusable && (
-                        <Badge label="Not reusable" className="bg-amber-50 text-amber-900" />
+                        <StatusBadge label="Not reusable" variant="warning" />
                       )}
                     </div>
                     <h3 className="mt-2 text-lg font-bold text-brand-charcoal">{template.name}</h3>

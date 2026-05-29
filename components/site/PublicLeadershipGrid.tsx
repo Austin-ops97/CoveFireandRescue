@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@/components/site/Card";
+import { AlertBanner, EmptyState, SkeletonGrid } from "@/components/ui";
 import { fetchPublicLeadership } from "@/lib/leadership/client";
 import type { LeadershipMemberRecord } from "@/lib/leadership/types";
 
@@ -86,30 +87,23 @@ export function PublicLeadershipGrid() {
   }, []);
 
   if (loading) {
-    return (
-      <Card>
-        <p className="text-sm text-brand-gray">Loading command staff…</p>
-      </Card>
-    );
+    return <SkeletonGrid count={4} />;
   }
 
   if (error) {
     return (
-      <Card className="border-l-4 border-l-brand-red">
-        <p className="text-sm font-medium text-brand-charcoal">Could not load leadership</p>
-        <p className="mt-1 text-sm text-brand-gray">{error}</p>
-      </Card>
+      <AlertBanner variant="error" title="Could not load leadership">
+        {error}
+      </AlertBanner>
     );
   }
 
   if (leadership.length === 0) {
     return (
-      <Card>
-        <h3 className="font-bold text-brand-charcoal">Leadership profiles coming soon</h3>
-        <p className="mt-2 text-sm text-brand-gray">
-          Command staff bios will be published here as they are added by department leadership.
-        </p>
-      </Card>
+      <EmptyState
+        title="Leadership profiles coming soon"
+        description="Command staff bios will be published here as they are added by department leadership."
+      />
     );
   }
 

@@ -12,17 +12,19 @@ export function SectionHeader({
   className = "",
 }: SectionHeaderProps) {
   return (
-    <div className={`mb-8 ${centered ? "text-center" : ""} ${className}`}>
-      <h2 className="text-2xl font-bold tracking-tight text-brand-charcoal sm:text-3xl">
+    <div className={`mb-8 sm:mb-10 ${centered ? "text-center" : ""} ${className}`}>
+      <h2 className="text-xl font-bold tracking-tight text-brand-charcoal sm:text-2xl lg:text-3xl">
         {title}
       </h2>
       {subtitle && (
-        <p className="mt-2 max-w-2xl text-brand-gray sm:text-lg">{subtitle}</p>
+        <p
+          className={`mt-2 max-w-2xl text-base leading-relaxed text-brand-gray ${
+            centered ? "mx-auto" : ""
+          }`}
+        >
+          {subtitle}
+        </p>
       )}
-      <div
-        className={`mt-3 h-1 w-16 bg-brand-red ${centered ? "mx-auto" : ""}`}
-        aria-hidden
-      />
     </div>
   );
 }

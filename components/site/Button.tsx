@@ -1,28 +1,30 @@
 import Link from "next/link";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "outline" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger";
 type ButtonSize = "sm" | "md" | "lg";
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-brand-red text-white hover:bg-brand-red-dark focus-visible:ring-brand-red",
+    "bg-brand-red text-white shadow-sm hover:bg-brand-red-dark focus-visible:ring-brand-red/50",
   secondary:
-    "bg-brand-charcoal text-white hover:bg-brand-charcoal-light focus-visible:ring-brand-charcoal",
+    "bg-brand-charcoal text-white shadow-sm hover:bg-brand-charcoal-light focus-visible:ring-brand-charcoal/40",
   outline:
-    "border-2 border-brand-red text-brand-red hover:bg-brand-red hover:text-white focus-visible:ring-brand-red",
+    "border border-gray-200 bg-white text-brand-charcoal shadow-sm hover:border-gray-300 hover:bg-brand-gray-light focus-visible:ring-brand-red/30",
   ghost:
-    "text-brand-charcoal hover:bg-brand-gray-light focus-visible:ring-brand-gray",
+    "text-brand-charcoal hover:bg-brand-gray-light focus-visible:ring-brand-gray/30",
+  danger:
+    "bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:ring-red-500/40",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: "px-3 py-1.5 text-sm",
-  md: "px-5 py-2.5 text-base",
-  lg: "px-6 py-3 text-lg",
+  sm: "min-h-9 gap-1.5 px-3 py-2 text-sm",
+  md: "min-h-10 gap-2 px-4 py-2.5 text-sm",
+  lg: "min-h-12 gap-2 px-5 py-3 text-base",
 };
 
 const baseClasses =
-  "inline-flex items-center justify-center rounded-md font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex items-center justify-center rounded-lg font-semibold transition-[color,background-color,border-color,box-shadow] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
 
 type SharedProps = {
   variant?: ButtonVariant;

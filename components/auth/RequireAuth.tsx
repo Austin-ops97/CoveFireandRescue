@@ -7,11 +7,40 @@ import { useAuth } from "@/hooks/useAuth";
 import type { UserRole } from "@/lib/auth/roles";
 import { canAccessDashboard } from "@/lib/auth/roles";
 import { Card } from "@/components/site/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SkeletonCard } from "@/components/ui/Skeleton";
 
 type RequireAuthProps = {
   children: ReactNode;
   allowedRoles?: UserRole[];
 };
+
+function AuthGate({
+  title,
+  description,
+  href,
+  linkLabel,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  linkLabel: string;
+}) {
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <Card>
+        <h2 className="text-lg font-semibold text-brand-charcoal">{title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-brand-gray">{description}</p>
+        <Link
+          href={href}
+          className="mt-5 inline-flex min-h-10 items-center text-sm font-semibold text-brand-red hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/40 focus-visible:ring-offset-2 rounded"
+        >
+          {linkLabel}
+        </Link>
+      </Card>
+    </div>
+  );
+}
 
 export function RequireAuth({
   children,
@@ -29,106 +58,75 @@ export function RequireAuth({
 
   if (!configured) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
-        <Card>
-          <h2 className="text-lg font-bold text-brand-charcoal">Authentication not configured</h2>
-          <p className="mt-2 text-sm text-brand-gray">
-            Add Firebase keys to <code className="text-xs">.env.local</code> to enable member
-            login and dashboard access.
-          </p>
-          <Link href="/" className="mt-4 inline-block text-sm font-semibold text-brand-red hover:underline">
-            Return home
-          </Link>
-        </Card>
-      </div>
+      <AuthGate
+        title="Authentication not configured"
+        description="Add Firebase keys to .env.local to enable member login and dashboard access."
+        href="/"
+        linkLabel="Return home"
+      />
     );
   }
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <Card>
-          <p className="text-sm text-brand-gray">Loading member session…</p>
-        </Card>
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+        <SkeletonCard rows={2} />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <Card>
-          <p className="text-sm text-brand-gray">Redirecting to login…</p>
-        </Card>
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+        <EmptyState
+          title="Signing you in"
+          description="Redirecting to the member login page…"
+        />
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
-        <Card>
-          <h2 className="text-lg font-bold text-brand-charcoal">Access pending</h2>
-          <p className="mt-2 text-sm text-brand-gray">
-            Your Firebase account is signed in, but no Cove Fire &amp; Rescue member profile was
-            found. An administrator must create your <code className="text-xs">users/&#123;uid&#125;</code>{" "}
-            document in Firestore before you can access the dashboard.
-          </p>
-          <Link href="/" className="mt-4 inline-block text-sm font-semibold text-brand-red hover:underline">
-            Return home
-          </Link>
-        </Card>
-      </div>
+      <AuthGate
+        title="Access pending"
+        description="Your Firebase account is signed in, but no Cove Fire & Rescue member profile was found. An administrator must create your users/{uid} document in Firestore before you can access the dashboard."
+        href="/"
+        linkLabel="Return home"
+      />
     );
   }
 
   if (!profile.active) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
-        <Card>
-          <h2 className="text-lg font-bold text-brand-charcoal">Account inactive</h2>
-          <p className="mt-2 text-sm text-brand-gray">
-            Your member profile is inactive. Contact a department administrator if you believe
-            this is an error.
-          </p>
-          <Link href="/" className="mt-4 inline-block text-sm font-semibold text-brand-red hover:underline">
-            Return home
-          </Link>
-        </Card>
-      </div>
+      <AuthGate
+        title="Account inactive"
+        description="Your member profile is inactive. Contact a department administrator if you believe this is an error."
+        href="/"
+        linkLabel="Return home"
+      />
     );
   }
 
   if (!canAccessDashboard(role)) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
-        <Card>
-          <h2 className="text-lg font-bold text-brand-charcoal">Unauthorized</h2>
-          <p className="mt-2 text-sm text-brand-gray">
-            Your account does not have permission to access this area.
-          </p>
-          <Link href="/" className="mt-4 inline-block text-sm font-semibold text-brand-red hover:underline">
-            Return home
-          </Link>
-        </Card>
-      </div>
+      <AuthGate
+        title="Unauthorized"
+        description="Your account does not have permission to access this area."
+        href="/"
+        linkLabel="Return home"
+      />
     );
   }
 
   if (allowedRoles.length > 0 && role && !allowedRoles.includes(role)) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
-        <Card>
-          <h2 className="text-lg font-bold text-brand-charcoal">Insufficient permissions</h2>
-          <p className="mt-2 text-sm text-brand-gray">
-            This module requires a different role. Contact a department administrator if you need
-            access.
-          </p>
-          <Link href="/dashboard" className="mt-4 inline-block text-sm font-semibold text-brand-red hover:underline">
-            Back to dashboard
-          </Link>
-        </Card>
-      </div>
+      <AuthGate
+        title="Insufficient permissions"
+        description="This module requires a different role. Contact a department administrator if you need access."
+        href="/dashboard"
+        linkLabel="Back to dashboard"
+      />
     );
   }
 

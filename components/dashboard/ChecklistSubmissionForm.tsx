@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
+import { AlertBanner, SkeletonForm } from "@/components/ui";
 import {
   ChecklistFieldInput,
   defaultAnswerForField,
@@ -303,22 +304,14 @@ export function ChecklistSubmissionForm() {
   }
 
   if (loading) {
-    return (
-      <Card>
-        <p className="text-sm text-brand-gray">Loading checklist templates…</p>
-      </Card>
-    );
+    return <SkeletonForm />;
   }
 
   if (loadError) {
     return (
-      <Card className="border-l-4 border-l-brand-red">
-        <p className="text-sm font-medium text-brand-charcoal">Could not load checklists</p>
-        <p className="mt-1 text-sm text-brand-gray">{loadError}</p>
-        <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => void loadData()}>
-          Try again
-        </Button>
-      </Card>
+      <AlertBanner variant="error" title="Could not load checklists" onRetry={() => void loadData()}>
+        {loadError}
+      </AlertBanner>
     );
   }
 

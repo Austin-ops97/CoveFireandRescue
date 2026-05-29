@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/site/Badge";
 import { Card } from "@/components/site/Card";
+import { AlertBanner, EmptyState, SkeletonGrid } from "@/components/ui";
 import { fetchPublicFleet } from "@/lib/fleet/client";
 import type { FleetUnitRecord } from "@/lib/fleet/types";
 
@@ -114,30 +115,23 @@ export function PublicFleetGrid() {
   }, []);
 
   if (loading) {
-    return (
-      <Card>
-        <p className="text-sm text-brand-gray">Loading fleet apparatus…</p>
-      </Card>
-    );
+    return <SkeletonGrid count={3} />;
   }
 
   if (error) {
     return (
-      <Card className="border-l-4 border-l-brand-red">
-        <p className="text-sm font-medium text-brand-charcoal">Could not load fleet</p>
-        <p className="mt-1 text-sm text-brand-gray">{error}</p>
-      </Card>
+      <AlertBanner variant="error" title="Could not load fleet">
+        {error}
+      </AlertBanner>
     );
   }
 
   if (fleet.length === 0) {
     return (
-      <Card>
-        <h3 className="font-bold text-brand-charcoal">Fleet information coming soon</h3>
-        <p className="mt-2 text-sm text-brand-gray">
-          Apparatus details will be published here as they are added by department leadership.
-        </p>
-      </Card>
+      <EmptyState
+        title="Fleet information coming soon"
+        description="Apparatus details will be published here as they are added by department leadership."
+      />
     );
   }
 

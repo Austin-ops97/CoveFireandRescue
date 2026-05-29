@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/site/Badge";
 import { Card } from "@/components/site/Card";
+import { AlertBanner, EmptyState, SkeletonCardList } from "@/components/ui";
 import { fetchPublicAnnouncements } from "@/lib/announcements/client";
 import type { AnnouncementRecord } from "@/lib/announcements/types";
 import { getCategoryLabel } from "@/lib/announcements/types";
@@ -72,30 +73,23 @@ export function PublicAnnouncementsFeed() {
   }, []);
 
   if (loading) {
-    return (
-      <Card>
-        <p className="text-sm text-brand-gray">Loading community board posts…</p>
-      </Card>
-    );
+    return <SkeletonCardList count={4} />;
   }
 
   if (error) {
     return (
-      <Card className="border-l-4 border-l-brand-red">
-        <p className="text-sm font-medium text-brand-charcoal">Could not load announcements</p>
-        <p className="mt-1 text-sm text-brand-gray">{error}</p>
-      </Card>
+      <AlertBanner variant="error" title="Could not load announcements">
+        {error}
+      </AlertBanner>
     );
   }
 
   if (announcements.length === 0) {
     return (
-      <Card>
-        <h3 className="font-bold text-brand-charcoal">No published announcements yet</h3>
-        <p className="mt-2 text-sm text-brand-gray">
-          Check back soon for burn ban notices, training updates, events, and department news.
-        </p>
-      </Card>
+      <EmptyState
+        title="No published announcements yet"
+        description="Check back soon for burn ban notices, training updates, events, and department news."
+      />
     );
   }
 

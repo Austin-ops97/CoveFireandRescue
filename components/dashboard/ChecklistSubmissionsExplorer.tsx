@@ -2,9 +2,15 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge } from "@/components/site/Badge";
 import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
+import {
+  AlertBanner,
+  EmptyState,
+  SkeletonCardList,
+  StatusBadge,
+} from "@/components/ui";
+import { inputBase } from "@/lib/ui/classes";
 import { ReviewDashboardWidgets } from "@/components/dashboard/checklist/ReviewDashboardWidgets";
 import { SubmissionDetailModal } from "@/components/dashboard/checklist/SubmissionDetailModal";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,7 +38,7 @@ import type { StoredFileRecord } from "@/lib/storage/types";
 
 type ExplorerMode = "history" | "review";
 
-const inputClassName = "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm";
+const inputClassName = inputBase;
 
 function formatTimestamp(value: unknown): string {
   if (typeof value === "string") {
@@ -413,23 +419,19 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
         </Button>
       </Card>
 
-      {loading && (
-        <Card>
-          <p className="text-sm text-brand-gray">Loading submissions…</p>
-        </Card>
-      )}
+      {loading && <SkeletonCardList count={4} />}
 
       {loadError && (
-        <Card className="border-l-4 border-l-brand-red">
-          <p className="text-sm font-medium text-brand-charcoal">Could not load submissions</p>
-          <p className="mt-1 text-sm text-brand-gray">{loadError}</p>
-        </Card>
+        <AlertBanner variant="error" title="Could not load submissions">
+          {loadError}
+        </AlertBanner>
       )}
 
       {!loading && !loadError && submissions.length === 0 && (
-        <Card>
-          <p className="text-sm text-brand-gray">No submissions match the current filters.</p>
-        </Card>
+        <EmptyState
+          title="No submissions found"
+          description="No inspections match the current filters. Try adjusting the date range or template."
+        />
       )}
 
       {!loading &&
@@ -448,17 +450,13 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge
+                    <StatusBadge
                       label={hasAttention ? "Needs attention" : "Clear"}
-                      className={
-                        hasAttention
-                          ? "bg-red-100 text-red-800"
-                          : "bg-green-100 text-green-800"
-                      }
+                      variant={hasAttention ? "attention" : "pass"}
                     />
-                    <Badge
+                    <StatusBadge
                       label={getChecklistScopeLabel(submission.scope)}
-                      className="bg-brand-gray-light text-brand-charcoal"
+                      variant="neutral"
                     />
                   </div>
                   <h3 className="mt-2 text-lg font-bold text-brand-charcoal">

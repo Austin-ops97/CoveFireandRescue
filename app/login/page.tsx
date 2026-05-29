@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { PageShell } from "@/components/site/PageShell";
+import { SkeletonForm } from "@/components/ui/Skeleton";
 
 export const metadata: Metadata = {
   title: "Member Login",
@@ -16,9 +17,7 @@ export default function LoginPage() {
       narrow
     >
       <Suspense
-        fallback={
-          <p className="text-sm text-brand-gray">Loading login…</p>
-        }
+        fallback={<SkeletonForm />}
       >
         <LoginForm />
       </Suspense>

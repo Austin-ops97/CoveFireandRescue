@@ -1,9 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge } from "@/components/site/Badge";
 import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
+import {
+  AlertBanner,
+  CheckboxField,
+  EmptyState,
+  ListToolbar,
+  SkeletonTable,
+  StatusBadge,
+} from "@/components/ui";
+import { inputBase } from "@/lib/ui/classes";
 import { fetchManagedUsers, saveManagedUser } from "@/lib/users/client";
 import type { ManagedUserFormState, ManagedUserProfile } from "@/lib/users/types";
 
@@ -32,26 +40,15 @@ function formatTimestamp(value: unknown): string {
 
 function RoleBadge({ role }: { role: ManagedUserProfile["role"] }) {
   return (
-    <Badge
+    <StatusBadge
       label={role === "admin" ? "Admin" : "Member"}
-      className={
-        role === "admin"
-          ? "bg-brand-red/15 text-brand-red"
-          : "bg-brand-gray-light text-brand-charcoal"
-      }
+      variant={role === "admin" ? "admin" : "member"}
     />
   );
 }
 
-function StatusBadge({ active }: { active: boolean }) {
-  return (
-    <Badge
-      label={active ? "Active" : "Inactive"}
-      className={
-        active ? "bg-green-100 text-green-800" : "bg-brand-gray-light text-brand-charcoal"
-      }
-    />
-  );
+function UserStatusBadge({ active }: { active: boolean }) {
+  return <StatusBadge label={active ? "Active" : "Inactive"} variant={active ? "active" : "inactive"} />;
 }
 
 function validateForm(form: ManagedUserFormState): string | null {
@@ -196,48 +193,28 @@ export function UserAccessManager() {
         </ul>
       </Card>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-brand-charcoal">Authorized personnel</h2>
-          <p className="mt-1 text-sm text-brand-gray">
-            {loading ? "Loading…" : `${users.length} user profile${users.length === 1 ? "" : "s"}`}
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={loading || refreshing}
-          onClick={() => void loadUsers(true)}
-        >
-          {refreshing ? "Refreshing…" : "Refresh Users"}
-        </Button>
-      </div>
+      <ListToolbar
+        title="Authorized personnel"
+        countLabel={
+          loading
+            ? undefined
+            : `${users.length} user profile${users.length === 1 ? "" : "s"}`
+        }
+        onRefresh={() => void loadUsers(true)}
+        refreshing={refreshing}
+        refreshDisabled={loading || refreshing}
+      />
 
-      {successMessage && (
-        <Card className="border-l-4 border-l-green-600 bg-green-50/50">
-          <p className="text-sm font-medium text-green-900">{successMessage}</p>
-        </Card>
-      )}
+      {successMessage && <AlertBanner variant="success">{successMessage}</AlertBanner>}
 
       {loadError && (
-        <Card className="border-l-4 border-l-brand-red bg-red-50/40">
-          <p className="text-sm font-medium text-brand-charcoal">Could not load users</p>
-          <p className="mt-1 text-sm text-brand-gray">{loadError}</p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => void loadUsers(true)}
-          >
-            Try again
-          </Button>
-        </Card>
+        <AlertBanner variant="error" title="Could not load users" onRetry={() => void loadUsers(true)}>
+          {loadError}
+        </AlertBanner>
       )}
 
       <Card>
-        <h2 className="text-lg font-bold text-brand-charcoal">
+        <h2 className="text-base font-semibold text-brand-charcoal">
           {editingUid ? "Edit authorized user" : "Add authorized user"}
         </h2>
         <p className="mt-1 text-sm text-brand-gray">
@@ -246,7 +223,7 @@ export function UserAccessManager() {
             : "Paste the Firebase Auth UID after the account exists in Firebase Console."}
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
           <div>
             <label htmlFor="uid" className="block text-sm font-semibold text-brand-charcoal">
               Firebase Auth UID <span className="text-brand-red">*</span>
@@ -259,7 +236,7 @@ export function UserAccessManager() {
               readOnly={Boolean(editingUid)}
               value={form.uid}
               onChange={(event) => setForm((prev) => ({ ...prev, uid: event.target.value }))}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-brand-gray-light/50"
+              className={`${inputBase} disabled:bg-brand-gray-light/50`}
               placeholder="Paste UID from Firebase Console"
               autoComplete="off"
             />
@@ -276,7 +253,7 @@ export function UserAccessManager() {
                 type="email"
                 value={form.email}
                 onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className={inputBase}
                 placeholder="optional@example.com"
                 autoComplete="off"
               />
@@ -296,7 +273,7 @@ export function UserAccessManager() {
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, displayName: event.target.value }))
                 }
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className={inputBase}
                 placeholder="Optional"
                 autoComplete="name"
               />
@@ -319,24 +296,19 @@ export function UserAccessManager() {
                     role: event.target.value as ManagedUserFormState["role"],
                   }))
                 }
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className={inputBase}
               >
                 <option value="member">Member</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
-            <div className="flex items-end pb-2">
-              <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-brand-charcoal">
-                <input
-                  type="checkbox"
-                  checked={form.active}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, active: event.target.checked }))
-                  }
-                  className="h-4 w-4 rounded border-gray-300 text-brand-red focus:ring-brand-red"
-                />
-                Active (can access dashboard when signed in)
-              </label>
+            <div className="flex items-end sm:col-span-1">
+              <CheckboxField
+                id="userActive"
+                label="Active (can access dashboard when signed in)"
+                checked={form.active}
+                onChange={(active) => setForm((prev) => ({ ...prev, active }))}
+              />
             </div>
           </div>
 
@@ -359,19 +331,13 @@ export function UserAccessManager() {
         </form>
       </Card>
 
-      {loading && !loadError && (
-        <Card>
-          <p className="text-sm text-brand-gray">Loading authorized users…</p>
-        </Card>
-      )}
+      {loading && !loadError && <SkeletonTable rows={5} />}
 
       {!loading && !loadError && users.length === 0 && (
-        <Card>
-          <h3 className="font-bold text-brand-charcoal">No user profiles yet</h3>
-          <p className="mt-2 text-sm text-brand-gray">
-            After creating a Firebase Auth account, add their UID using the form above.
-          </p>
-        </Card>
+        <EmptyState
+          title="No user profiles yet"
+          description="After creating a Firebase Auth account, add their UID using the form above."
+        />
       )}
 
       {!loading && !loadError && users.length > 0 && (
@@ -379,8 +345,8 @@ export function UserAccessManager() {
           <div className="hidden md:block">
             <Card className="overflow-hidden p-0">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-brand-gray/20 text-left text-sm">
-                  <thead className="bg-brand-charcoal/5">
+                <table className="min-w-full divide-y divide-gray-100 text-left text-sm">
+                  <thead className="bg-gray-50/90">
                     <tr>
                       <th className="px-4 py-3 font-semibold text-brand-charcoal">Name</th>
                       <th className="px-4 py-3 font-semibold text-brand-charcoal">Email</th>
@@ -405,7 +371,7 @@ export function UserAccessManager() {
                           <RoleBadge role={user.role} />
                         </td>
                         <td className="px-4 py-3">
-                          <StatusBadge active={user.active} />
+                          <UserStatusBadge active={user.active} />
                         </td>
                         <td className="px-4 py-3 text-brand-gray">
                           {formatTimestamp(user.updatedAt)}
@@ -439,7 +405,7 @@ export function UserAccessManager() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <RoleBadge role={user.role} />
-                    <StatusBadge active={user.active} />
+                    <UserStatusBadge active={user.active} />
                   </div>
                 </div>
                 <p className="mt-3 break-all font-mono text-xs text-brand-gray">{user.uid}</p>
