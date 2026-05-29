@@ -1,0 +1,163 @@
+import { FieldValue } from "firebase-admin/firestore";
+import { NextResponse } from "next/server";
+import { writeAuditLog } from "@/lib/audit/server";
+import {
+  requireServerRole,
+  serverAuthErrorResponse,
+} from "@/lib/auth/server";
+import { adminDb } from "@/lib/firebase/admin";
+import { COLLECTIONS } from "@/lib/firestore/collections";
+import { serializeFleetDoc } from "@/lib/fleet/server";
+import {
+  ChecklistValidationError,
+  filterSubmissions,
+  serializeChecklistSubmissionDoc,
+  serializeChecklistTemplateDoc,
+  sortSubmissionsNewestFirst,
+  validateChecklistSubmissionPayload,
+} from "@/lib/checklist/server";
+import type { ChecklistSubmissionPayload, ChecklistTemplateScope } from "@/lib/checklist/types";
+
+function badRequest(message: string): Response {
+  return NextResponse.json({ error: message }, { status: 400 });
+}
+
+async function resolveFleetUnitName(fleetUnitId: string | null): Promise<string | null> {
+  if (!fleetUnitId) return null;
+
+  const snapshot = await adminDb.collection(COLLECTIONS.fleet).doc(fleetUnitId).get();
+  if (!snapshot.exists) {
+    throw new ChecklistValidationError("Selected fleet unit was not found.");
+  }
+
+  const fleetUnit = serializeFleetDoc(snapshot);
+  if (fleetUnit.status !== "active" || !fleetUnit.active) {
+    throw new ChecklistValidationError("Selected fleet unit is not active.");
+  }
+
+  return fleetUnit.unitNumber
+    ? `${fleetUnit.name} (#${fleetUnit.unitNumber})`
+    : fleetUnit.name;
+}
+
+export async function GET(request: Request) {
+  try {
+    const user = await requireServerRole(request, ["admin", "member"]);
+    const { searchParams } = new URL(request.url);
+
+    const snapshot = await adminDb.collection(COLLECTIONS.checklistSubmissions).limit(300).get();
+
+    let submissions = sortSubmissionsNewestFirst(
+      snapshot.docs.map((doc) => serializeChecklistSubmissionDoc(doc))
+    );
+
+    if (user.role === "member") {
+      submissions = submissions.filter((item) => item.submittedBy === user.uid);
+    }
+
+    const scopeParam = searchParams.get("scope")?.trim();
+    const scope =
+      scopeParam === "fleet" ||
+      scopeParam === "station" ||
+      scopeParam === "equipment" ||
+      scopeParam === "general"
+        ? (scopeParam as ChecklistTemplateScope)
+        : undefined;
+
+    const filters = {
+      templateId: searchParams.get("templateId")?.trim() || undefined,
+      scope,
+      relatedFleetUnitId: searchParams.get("relatedFleetUnitId")?.trim() || undefined,
+      submittedBy:
+        user.role === "admin"
+          ? searchParams.get("submittedBy")?.trim() || undefined
+          : undefined,
+      fromDate: searchParams.get("fromDate")?.trim() || undefined,
+      toDate: searchParams.get("toDate")?.trim() || undefined,
+      search: searchParams.get("search")?.trim() || undefined,
+      attentionOnly: searchParams.get("attentionOnly") === "true",
+    };
+
+    submissions = filterSubmissions(submissions, filters).slice(0, 200);
+
+    return NextResponse.json({ submissions });
+  } catch (error) {
+    return serverAuthErrorResponse(error);
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const actor = await requireServerRole(request, ["admin", "member"]);
+
+    let body: ChecklistSubmissionPayload;
+    try {
+      body = (await request.json()) as ChecklistSubmissionPayload;
+    } catch {
+      return badRequest("Invalid JSON body.");
+    }
+
+    const templateRef = adminDb
+      .collection(COLLECTIONS.checklistTemplates)
+      .doc(body.templateId?.trim() ?? "");
+    const templateSnapshot = await templateRef.get();
+
+    if (!templateSnapshot.exists) {
+      return badRequest("Checklist template not found.");
+    }
+
+    const template = serializeChecklistTemplateDoc(templateSnapshot);
+
+    let validated;
+    try {
+      validated = validateChecklistSubmissionPayload(body, template);
+    } catch (error) {
+      if (error instanceof ChecklistValidationError) {
+        return badRequest(error.message);
+      }
+      throw error;
+    }
+
+    let relatedFleetUnitName: string | null = null;
+    try {
+      relatedFleetUnitName = await resolveFleetUnitName(validated.relatedFleetUnitId);
+    } catch (error) {
+      if (error instanceof ChecklistValidationError) {
+        return badRequest(error.message);
+      }
+      throw error;
+    }
+
+    const docRef = adminDb.collection(COLLECTIONS.checklistSubmissions).doc();
+    const writeData: Record<string, unknown> = {
+      templateId: template.id,
+      templateName: template.name,
+      scope: template.scope,
+      relatedFleetUnitId: validated.relatedFleetUnitId,
+      relatedFleetUnitName,
+      submittedBy: actor.uid,
+      submittedByName: actor.displayName ?? actor.email ?? null,
+      notes: validated.notes,
+      answers: validated.answers,
+      photoFileIds: validated.photoFileIds,
+      submittedAt: FieldValue.serverTimestamp(),
+    };
+
+    await docRef.set(writeData);
+
+    const saved = serializeChecklistSubmissionDoc(await docRef.get());
+
+    await writeAuditLog({
+      action: "checklist.submission.created",
+      actorUid: actor.uid,
+      actorRole: actor.role!,
+      targetType: "checklistSubmission",
+      targetId: saved.id,
+      message: `Submitted checklist "${template.name}"${relatedFleetUnitName ? ` for ${relatedFleetUnitName}` : ""}`,
+    });
+
+    return NextResponse.json({ submission: saved }, { status: 201 });
+  } catch (error) {
+    return serverAuthErrorResponse(error);
+  }
+}

@@ -1,0 +1,124 @@
+rules_version = '2';
+
+// Example / planning file — NOT deployed automatically.
+// Copy ideas into firestore.rules and deploy with:
+//   firebase deploy --only firestore:rules
+//
+// Firebase Admin SDK (server API routes) bypasses these client rules.
+// All privileged writes that must enforce roles should go through server routes
+// OR be covered by strict rules below.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helpers (intended) ---
+    //
+    // function isSignedIn() {
+    //   return request.auth != null;
+    // }
+    //
+    // function userDoc() {
+    //   return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    // }
+    //
+    // function isActiveMember() {
+    //   return isSignedIn()
+    //     && userDoc().data.active == true
+    //     && userDoc().data.role in ['member', 'admin'];
+    // }
+    //
+    // function isAdmin() {
+    //   return isSignedIn()
+    //     && userDoc().data.active == true
+    //     && userDoc().data.role == 'admin';
+    // }
+
+    // --- users ---
+    //
+    // Users can read their own profile (uid must match auth uid).
+    // Admins can read/write all user profiles (prefer server API for writes).
+    //
+    // match /users/{userId} {
+    //   allow read: if isSignedIn() && request.auth.uid == userId;
+    //   allow read, write: if isAdmin();
+    // }
+
+    // --- announcements ---
+    //
+    // Public: published announcements readable by everyone.
+    // Members/admins: read drafts and internal fields when active.
+    // Admins: create, update, delete, publish.
+    //
+    // match /announcements/{id} {
+    //   allow read: if resource.data.status == 'published'
+    //     || (isActiveMember() && resource.data.status in ['draft', 'published', 'archived']);
+    //   allow write: if isAdmin();
+    // }
+
+    // --- fleet ---
+    //
+    // Public: active fleet units readable by everyone.
+    // Admins: full CRUD including inactive records.
+    //
+    // match /fleet/{id} {
+    //   allow read: if resource.data.active == true || isAdmin();
+    //   allow write: if isAdmin();
+    // }
+
+    // --- leadership ---
+    //
+    // Public: active leadership profiles readable by everyone.
+    // Admins: full CRUD.
+    //
+    // match /leadership/{id} {
+    //   allow read: if resource.data.active == true || isAdmin();
+    //   allow write: if isAdmin();
+    // }
+
+    // --- roundTemplates ---
+    //
+    // Active members: read active templates.
+    // Admins: manage templates.
+    //
+    // match /roundTemplates/{id} {
+    //   allow read: if isActiveMember();
+    //   allow write: if isAdmin();
+    // }
+
+    // --- rounds (submissions) ---
+    //
+    // Members: create and update own submissions; read relevant internal records.
+    // Admins: read all, delete if needed.
+    //
+    // match /rounds/{id} {
+    //   allow read: if isActiveMember();
+    //   allow create, update: if isActiveMember();
+    //   allow delete: if isAdmin();
+    // }
+
+    // --- files (B2 metadata) ---
+    //
+    // Sensitive file metadata should be written via server API routes after
+    // Firebase Admin token + role verification. Client rules may allow read
+    // for active members on non-sensitive fields only.
+    //
+    // match /files/{id} {
+    //   allow read: if isActiveMember();
+    //   allow write: if false; // server-only writes
+    // }
+
+    // --- auditLogs ---
+    //
+    // Append-only via Admin SDK / server routes. No client writes.
+    //
+    // match /auditLogs/{id} {
+    //   allow read: if isAdmin();
+    //   allow write: if false;
+    // }
+
+    // Default deny until rules are implemented:
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

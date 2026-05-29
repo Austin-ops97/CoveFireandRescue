@@ -1,0 +1,42 @@
+# Backblaze B2 Setup
+
+Cove Fire & Rescue stores large files (fleet photos, leadership portraits, and future uploads) in **Backblaze B2**. **Firestore** stores file metadata only. The app does **not** use Firebase Storage for large files.
+
+## Required environment variables
+
+Set these in Vercel (and locally in `.env.local`):
+
+| Variable | Description |
+|----------|-------------|
+| `B2_APPLICATION_KEY_ID` | Backblaze application key ID |
+| `B2_APPLICATION_KEY` | Backblaze application key secret (server-only) |
+| `B2_BUCKET_ID` | Target bucket ID |
+| `B2_BUCKET_NAME` | Target bucket name |
+| `B2_ENDPOINT` | B2 API endpoint (e.g. `https://api.backblazeb2.com`) |
+| `B2_PUBLIC_BASE_URL` | Public base URL for browser-accessible files (e.g. friendly CDN or bucket public URL) |
+
+These values are read only on the server (`lib/storage/b2.ts` uses `import "server-only"`). They must never be exposed to client bundles.
+
+## Security recommendations
+
+- Create a **dedicated B2 application key** restricted to the specific bucket used by this app.
+- Keep the application key secret in server environment variables only.
+- Make the bucket public **only if** you intend public image URLs (fleet and leadership photos on the public site).
+- Use lifecycle rules later if you need automatic deletion or tiering for old files.
+
+## How uploads work
+
+1. An **admin** requests an upload URL from `POST /api/storage/b2/upload-url` (Firebase Admin verifies the session).
+2. The server returns a short-lived B2 upload URL and authorization token plus the object key and public URL.
+3. The browser uploads the file **directly to B2** (no large file passes through Vercel).
+4. The client calls `POST /api/storage/b2/complete` to save metadata in the Firestore `files` collection.
+5. Dashboard managers link returned file IDs to `fleet.imageFileIds` or `leadership.photoFileId`.
+6. Public fleet and leadership APIs resolve file metadata server-side and return `primaryImageUrl` / `photoUrl`.
+
+## Firebase vs B2
+
+| System | Stores |
+|--------|--------|
+| Firestore `files` | Metadata: names, content type, size, B2 ids/keys, public URL, uploader, module, related record |
+| Backblaze B2 | Actual file bytes |
+| Firebase Storage | Not used for large files in this project |
