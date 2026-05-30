@@ -12,6 +12,8 @@ import {
 } from "@/components/ui";
 import { inputBase } from "@/lib/ui/classes";
 import { ReviewDashboardWidgets } from "@/components/dashboard/checklist/ReviewDashboardWidgets";
+import { FleetUnitReference } from "@/components/dashboard/checklist/FleetUnitReference";
+import { PhotoGallery } from "@/components/dashboard/checklist/PhotoGallery";
 import { SubmissionDetailModal } from "@/components/dashboard/checklist/SubmissionDetailModal";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -33,6 +35,8 @@ import {
   type ChecklistTemplateRecord,
   type ChecklistTemplateScope,
 } from "@/lib/checklist/types";
+import { fetchAdminFleet } from "@/lib/fleet/client";
+import type { FleetUnitRecord } from "@/lib/fleet/types";
 import { resolveStoredFiles } from "@/lib/storage/client";
 import type { StoredFileRecord } from "@/lib/storage/types";
 
@@ -73,6 +77,7 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
   const [templates, setTemplates] = useState<ChecklistTemplateRecord[]>([]);
   const [submissions, setSubmissions] = useState<ChecklistSubmissionRecord[]>([]);
   const [resolvedPhotos, setResolvedPhotos] = useState<Record<string, StoredFileRecord>>({});
+  const [fleetUnitsById, setFleetUnitsById] = useState<Map<string, FleetUnitRecord>>(new Map());
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<ChecklistSubmissionRecord | null>(
@@ -171,7 +176,7 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
     setLoadError(null);
 
     try {
-      const [templateItems, submissionItems] = await Promise.all([
+      const [templateItems, submissionItems, fleetItems] = await Promise.all([
         (isAdmin ? fetchAdminChecklistTemplates() : fetchActiveChecklistTemplates()).catch(
           () => [] as ChecklistTemplateRecord[]
         ),
@@ -185,10 +190,14 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
           search: search || undefined,
           attentionOnly: attentionOnly || undefined,
         }),
+        isAdmin
+          ? fetchAdminFleet().catch(() => [] as FleetUnitRecord[])
+          : Promise.resolve([] as FleetUnitRecord[]),
       ]);
 
       setTemplates(templateItems);
       setSubmissions(submissionItems);
+      setFleetUnitsById(new Map(fleetItems.map((unit) => [unit.id, unit])));
 
       const photoIds = submissionItems.flatMap((item) => [
         ...item.photoFileIds,
@@ -196,8 +205,12 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
       ]);
 
       if (photoIds.length > 0) {
-        const files = await resolveStoredFiles(photoIds);
-        setResolvedPhotos(files);
+        try {
+          const files = await resolveStoredFiles(photoIds);
+          setResolvedPhotos(files);
+        } catch {
+          setResolvedPhotos({});
+        }
       } else {
         setResolvedPhotos({});
       }
@@ -439,6 +452,10 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
         displayedSubmissions.map((submission) => {
           const template = templateMap.get(submission.templateId) ?? null;
           const hasAttention = submissionHasAttentionItems(submission, template);
+          const submissionPhotoIds = [
+            ...submission.photoFileIds,
+            ...submission.answers.flatMap((answer) => answer.photoFileIds ?? []),
+          ];
 
           return (
             <Card
@@ -464,11 +481,28 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
                   </h3>
                   <p className="mt-1 text-sm text-brand-gray">
                     {formatTimestamp(submission.submittedAt)}
-                    {submission.relatedFleetUnitName
-                      ? ` · ${submission.relatedFleetUnitName}`
-                      : ""}
                     {submission.submittedByName ? ` · ${submission.submittedByName}` : ""}
                   </p>
+                  {(submission.relatedFleetUnitId || submission.relatedFleetUnitName) && (
+                    <div className="mt-1.5">
+                      <FleetUnitReference
+                        fleetUnitId={submission.relatedFleetUnitId}
+                        fleetUnitName={submission.relatedFleetUnitName}
+                        fleetUnitsById={fleetUnitsById}
+                        isAdmin={isAdmin}
+                      />
+                    </div>
+                  )}
+                  {submissionPhotoIds.length > 0 && (
+                    <div className="mt-3 max-w-md">
+                      <PhotoGallery
+                        fileIds={submissionPhotoIds.slice(0, 4)}
+                        resolvedPhotos={resolvedPhotos}
+                        altPrefix={submission.templateName}
+                        thumbnailClassName="aspect-video h-20 w-full rounded-md object-cover"
+                      />
+                    </div>
+                  )}
                 </div>
                 <Button
                   type="button"
@@ -488,6 +522,8 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
           submission={selectedSubmission}
           template={templateMap.get(selectedSubmission.templateId) ?? null}
           resolvedPhotos={resolvedPhotos}
+          fleetUnitsById={fleetUnitsById}
+          isAdmin={isAdmin}
           onClose={() => setSelectedSubmission(null)}
         />
       )}

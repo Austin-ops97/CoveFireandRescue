@@ -75,24 +75,26 @@ service cloud.firestore {
     //   allow write: if isAdmin();
     // }
 
-    // --- roundTemplates ---
+    // --- checklistTemplates ---
     //
     // Active members: read active templates.
     // Admins: manage templates.
     //
-    // match /roundTemplates/{id} {
-    //   allow read: if isActiveMember();
-    //   allow write: if isAdmin();
+    // match /checklistTemplates/{id} {
+    //   allow read: if isActiveMember() && resource.data.active == true;
+    //   allow read, write: if isAdmin();
     // }
 
-    // --- rounds (submissions) ---
+    // --- checklistSubmissions ---
     //
-    // Members: create and update own submissions; read relevant internal records.
-    // Admins: read all, delete if needed.
+    // Members: read own submissions; create/update own submissions.
+    // Admins: read all; delete if needed.
     //
-    // match /rounds/{id} {
-    //   allow read: if isActiveMember();
-    //   allow create, update: if isActiveMember();
+    // match /checklistSubmissions/{id} {
+    //   allow read: if isAdmin()
+    //     || (isActiveMember() && resource.data.submittedBy == request.auth.uid);
+    //   allow create, update: if isActiveMember()
+    //     && request.resource.data.submittedBy == request.auth.uid;
     //   allow delete: if isAdmin();
     // }
 
