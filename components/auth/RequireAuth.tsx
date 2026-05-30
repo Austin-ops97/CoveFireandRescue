@@ -87,6 +87,14 @@ export function RequireAuth({
   }
 
   if (!profile) {
+    console.warn("[auth/gate] Access pending", {
+      firebaseAuthUid: user.uid,
+      firebaseAuthEmail: user.email,
+      reason: "profile_is_null",
+      failingCheck: "RequireAuth: !profile",
+      hint:
+        "Client Firestore lookup returned null or threw. Check browser console for [auth/profile] logs.",
+    });
     return (
       <AuthGate
         title="Access pending"

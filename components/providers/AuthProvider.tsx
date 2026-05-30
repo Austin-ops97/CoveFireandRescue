@@ -61,7 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const db = getFirebaseDb();
-    const nextProfile = await getUserProfile(db, user.uid);
+    const nextProfile = await getUserProfile(db, user.uid, {
+      email: user.email,
+    });
     setProfile(nextProfile);
   }, [user, configured]);
 
@@ -92,12 +94,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         const db = getFirebaseDb();
-        const existing = await getUserProfile(db, nextUser.uid);
+        const existing = await getUserProfile(db, nextUser.uid, {
+          email: nextUser.email,
+        });
         if (!cancelled) {
           setProfile(existing);
         }
       } catch (error) {
-        console.error("Failed to load user profile", error);
+        console.error("[auth/profile] Failed to load user profile", {
+          firebaseAuthUid: nextUser.uid,
+          firebaseAuthEmail: nextUser.email,
+          error,
+        });
         if (!cancelled) {
           setProfile(null);
         }

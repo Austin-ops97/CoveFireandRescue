@@ -150,7 +150,9 @@ function readErrorMessage(error: unknown, fallback: string): string {
 }
 
 /** Safe connectivity probe for Firebase Admin SDK (no secrets returned). */
-export async function testFirebaseAdminConnectivity(): Promise<FirebaseAdminConnectivityResult> {
+export async function testFirebaseAdminConnectivity(): Promise<
+  FirebaseAdminConnectivityResult & { firebaseProjectId?: string }
+> {
   try {
     ensureAdmin();
   } catch (error) {
@@ -211,6 +213,7 @@ export async function testFirebaseAdminConnectivity(): Promise<FirebaseAdminConn
     firebaseAdminInitialized: true,
     firestoreReadOk: true,
     usersCollectionReadable: true,
+    firebaseProjectId: ensureAdmin().auth.app.options.projectId ?? undefined,
   };
 }
 
