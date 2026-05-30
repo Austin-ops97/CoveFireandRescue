@@ -4,6 +4,15 @@ import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
+/** True when all Firebase Admin env vars are set (does not initialize the SDK). */
+export function isFirebaseAdminConfigured(): boolean {
+  return Boolean(
+    process.env.FIREBASE_PROJECT_ID?.trim() &&
+      process.env.FIREBASE_CLIENT_EMAIL?.trim() &&
+      process.env.FIREBASE_PRIVATE_KEY?.trim()
+  );
+}
+
 function assertAdminEnv(): {
   projectId: string;
   clientEmail: string;
@@ -21,7 +30,8 @@ function assertAdminEnv(): {
   if (missing.length > 0) {
     throw new Error(
       `Missing required Firebase Admin environment variables: ${missing.join(", ")}. ` +
-        "Add them to .env.local (server-only, no NEXT_PUBLIC_ prefix)."
+        "Add them in Vercel → Project → Settings → Environment Variables (server-only, no NEXT_PUBLIC_ prefix). " +
+        "See docs/VERCEL_ENV_SETUP.md."
     );
   }
 

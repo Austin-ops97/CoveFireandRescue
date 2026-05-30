@@ -4,6 +4,7 @@
  */
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getAnalytics, isSupported, type Analytics } from "firebase/analytics";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import {
@@ -15,8 +16,24 @@ import {
 export let firebaseApp!: FirebaseApp;
 export let auth!: Auth;
 export let db!: Firestore;
+export let analytics: Analytics | undefined;
 
 let initialized = false;
+
+async function initAnalyticsIfConfigured(app: FirebaseApp): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID?.trim()) {
+    return;
+  }
+
+  try {
+    const supported = await isSupported();
+    if (supported) {
+      analytics = getAnalytics(app);
+    }
+  } catch (error) {
+    console.warn("Firebase Analytics initialization skipped.", error);
+  }
+}
 
 function ensureBrowser(): void {
   if (typeof window === "undefined") {
@@ -45,6 +62,7 @@ export function initFirebaseClient(): boolean {
   firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   auth = getAuth(firebaseApp);
   db = getFirestore(firebaseApp);
+  void initAnalyticsIfConfigured(firebaseApp);
   initialized = true;
   return true;
 }

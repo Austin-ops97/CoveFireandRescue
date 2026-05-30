@@ -120,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Firebase Auth is not configured.");
       }
       initFirebaseClient();
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email.trim(), password);
     },
     [configured]
   );

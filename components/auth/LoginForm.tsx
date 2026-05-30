@@ -6,6 +6,7 @@ import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { FormField, Input } from "@/components/ui/FormField";
+import { FirebaseConfigDebug } from "@/components/auth/FirebaseConfigDebug";
 import { getFriendlyAuthErrorMessage } from "@/lib/firebase/errors";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -93,6 +94,8 @@ export function LoginForm() {
           Accounts are created manually by administrators — there is no public signup.
         </AlertBanner>
       )}
+
+      <FirebaseConfigDebug />
     </Card>
   );
 }
