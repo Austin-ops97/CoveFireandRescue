@@ -7,7 +7,7 @@ import { COLLECTIONS } from "@/lib/firestore/collections";
 
 export async function writeAuditLog(
   entry: Omit<AuditLogEntry, "id" | "createdAt">
-): Promise<void> {
+): Promise<boolean> {
   try {
     await adminDb.collection(COLLECTIONS.auditLogs).add({
       action: entry.action,
@@ -18,7 +18,9 @@ export async function writeAuditLog(
       message: entry.message ?? null,
       createdAt: FieldValue.serverTimestamp(),
     });
+    return true;
   } catch (error) {
     console.error("Failed to write audit log:", error);
+    return false;
   }
 }

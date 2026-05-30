@@ -42,7 +42,12 @@ export default function FirstAdminSetupPage() {
         return;
       }
 
-      await refreshProfile();
+      try {
+        await refreshProfile();
+      } catch (refreshError) {
+        console.error("Profile refresh after first-admin setup failed:", refreshError);
+      }
+
       setResult({
         kind: "success",
         message: payload.message ?? "First admin profile created.",

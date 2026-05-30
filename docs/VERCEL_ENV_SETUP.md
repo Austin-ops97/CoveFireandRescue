@@ -40,16 +40,26 @@ Generate the key once in **Firebase Console → Project Settings → Service Acc
 ### `FIREBASE_PRIVATE_KEY` format
 
 1. Open the service account JSON and copy the `private_key` field value.
-2. Keep the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines.
-3. Paste into Vercel as **one** environment variable named `FIREBASE_PRIVATE_KEY`.
-4. If Vercel accepts a multi-line value directly, use it as-is.
-5. If Admin auth fails after deploy, convert line breaks to escaped `\n` (single line), for example:
+2. Paste into Vercel as **one** environment variable named `FIREBASE_PRIVATE_KEY`.
+3. **Prefer one line with `\n` escapes** (most reliable on Vercel):
 
    ```
    -----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n
    ```
 
-The app normalizes escaped newlines with `replace(/\\n/g, "\n")` in `lib/firebase/admin.ts`.
+4. Multi-line paste is also supported if Vercel accepts it directly.
+5. **Do not** wrap the value in extra quotes inside Vercel (no surrounding `"..."`).
+6. The value **must** include both markers:
+   - starts with `-----BEGIN PRIVATE KEY-----`
+   - ends with `-----END PRIVATE KEY-----` or `-----END PRIVATE KEY-----\n`
+
+The app normalizes the key in `lib/firebase/admin.ts`: strips accidental wrapping quotes, converts `\n` escapes to real newlines, and rejects malformed keys before initializing Admin SDK.
+
+If bootstrap or admin APIs fail with permission or credential errors, check:
+
+```text
+GET https://<your-domain>/api/debug/firebase-admin
+```
 
 Do **not** paste your real private key into git, docs, or chat.
 
@@ -104,6 +114,39 @@ Success:
   "ok": true,
   "firebaseAdmin": true,
   "firestore": true
+}
+```
+
+### Firebase Admin bootstrap debug (no auth)
+
+Use before the first admin exists to verify server-side Admin SDK and Firestore access:
+
+```text
+GET https://<your-domain>/api/debug/firebase-admin
+```
+
+Success:
+
+```json
+{
+  "ok": true,
+  "firebaseAdminInitialized": true,
+  "firestoreReadOk": true,
+  "usersCollectionReadable": true
+}
+```
+
+Failure example:
+
+```json
+{
+  "ok": false,
+  "firebaseAdminInitialized": true,
+  "firestoreReadOk": false,
+  "usersCollectionReadable": false,
+  "step": "firestore-read",
+  "code": "7",
+  "message": "Firestore Admin read failed. Check service account IAM permissions and Firestore setup."
 }
 ```
 

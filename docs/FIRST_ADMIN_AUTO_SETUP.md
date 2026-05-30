@@ -52,9 +52,18 @@ An audit log entry (`user.profile.created`) is written when the audit helper is 
 
 ## Troubleshooting
 
+Before using the setup page, verify server-side Firebase Admin access:
+
+```text
+GET https://<your-domain>/api/debug/firebase-admin
+```
+
 | Symptom | Likely cause |
 |---------|----------------|
 | `Authentication required` | Not signed in, or missing Bearer token |
-| `Invalid or expired authentication token` | Sign out and sign in again |
+| `Token verification failed…` | Sign out and sign in again |
+| `Admin lookup failed…` | Malformed `FIREBASE_PRIVATE_KEY` or service account lacks Firestore read permission |
+| `Profile creation failed…` | Service account lacks Firestore write permission |
 | `First admin already exists…` | Bootstrap already completed; use `/dashboard` or ask an admin to create your profile |
-| `500` / server error | Check Firebase Admin env vars and server logs |
+| `Missing or insufficient permissions` on setup page after success | Profile was created; client profile refresh failed — go to `/dashboard` or reload |
+| `500` / server error | Check `/api/debug/firebase-admin` and Vercel function logs |
