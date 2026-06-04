@@ -53,10 +53,11 @@ export function Header() {
           <Image
             src="/logo.png"
             alt="Cove Fire & Rescue — Chambers County volunteer fire department"
-            width={56}
-            height={56}
-            className="h-12 w-auto shrink-0 sm:h-14"
+            width={80}
+            height={80}
+            className="h-[3.25rem] w-auto shrink-0 sm:h-[3.75rem]"
             priority
+            unoptimized
           />
           <div className="min-w-0">
             <p className="truncate text-base font-bold leading-tight text-brand-blue sm:text-lg">

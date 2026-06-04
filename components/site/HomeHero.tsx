@@ -20,6 +20,7 @@ export function HomeHero() {
           height={420}
           className="h-auto w-full"
           priority
+          unoptimized
         />
       </div>
 
@@ -55,13 +56,14 @@ export function HomeHero() {
               role="img"
               aria-label="Cove Fire and Rescue department badge — apparatus and crew photo placeholder"
             >
-              <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full border-4 border-brand-gold bg-brand-blue shadow-inner sm:h-32 sm:w-32">
+              <div className="mx-auto flex h-32 w-32 items-center justify-center sm:h-36 sm:w-36">
                 <Image
                   src="/logo.png"
                   alt="Cove Fire and Rescue logo"
-                  width={96}
-                  height={96}
-                  className="h-20 w-auto sm:h-24"
+                  width={140}
+                  height={140}
+                  className="h-28 w-auto drop-shadow-md sm:h-32"
+                  unoptimized
                 />
               </div>
               <p className="mt-5 text-center text-lg font-bold text-white">Est. {siteConfig.yearsInService} Years</p>

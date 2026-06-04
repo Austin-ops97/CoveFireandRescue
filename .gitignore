@@ -20,6 +20,7 @@
 
 # misc
 .DS_Store
+.venv-logo/
 *.pem
 
 # debug
