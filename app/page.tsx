@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { HomeAnnouncementsPreview } from "@/components/site/HomeAnnouncementsPreview";
+import { HomeApparatusFeature } from "@/components/site/HomeApparatusFeature";
 import { HomeHero } from "@/components/site/HomeHero";
 import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
@@ -64,6 +65,8 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      <HomeApparatusFeature />
 
       <section className="border-y border-brand-gold/25 bg-brand-gray-light">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">

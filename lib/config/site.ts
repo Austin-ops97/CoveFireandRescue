@@ -12,6 +12,17 @@ export const siteConfig = {
   heroHeadline:
     "Protecting Cove and West Chambers County with readiness, training, and volunteer pride.",
 
+  heroStationImage: {
+    url: "https://gywtxy56gkl7cfua.public.blob.vercel-storage.com/unnamed-3.jpg",
+    alt: "Cove Fire & Rescue Station 91 — fire engines and support vehicles parked in front of the station bays in Cove, Texas.",
+  },
+
+  homeApparatusImage: {
+    url: "https://gywtxy56gkl7cfua.public.blob.vercel-storage.com/unnamed-4.jpg",
+    alt: "Cove Fire & Rescue Tanker 92 and fire apparatus staged during a daytime response, with department branding visible on the vehicles.",
+    caption: "Our volunteers and apparatus stand ready to protect Cove and surrounding mutual aid districts.",
+  },
+
   mission:
     "Cove Fire & Rescue serves the west side of Chambers County and surrounding mutual aid districts by providing safe, reliable fire protection and emergency response support.",
 

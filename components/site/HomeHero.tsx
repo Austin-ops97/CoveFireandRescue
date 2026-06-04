@@ -3,6 +3,8 @@ import { Button } from "@/components/site/Button";
 import { siteConfig } from "@/lib/config/site";
 
 export function HomeHero() {
+  const { heroStationImage } = siteConfig;
+
   return (
     <section className="relative overflow-hidden bg-brand-blue text-white">
       <div
@@ -51,31 +53,37 @@ export function HomeHero() {
           </div>
 
           <div className="flex justify-center lg:justify-end">
-            <div
-              className="relative w-full max-w-sm rounded-2xl border-2 border-brand-gold/50 bg-white/10 p-6 shadow-xl backdrop-blur-sm sm:p-8"
-              role="img"
-              aria-label="Cove Fire and Rescue department badge — apparatus and crew photo placeholder"
-            >
-              <div className="mx-auto flex h-32 w-32 items-center justify-center sm:h-36 sm:w-36">
+            <div className="w-full max-w-md overflow-hidden rounded-2xl border-2 border-brand-gold/50 bg-white/10 shadow-xl">
+              <div className="relative aspect-[4/3] w-full bg-brand-charcoal">
                 <Image
-                  src="/logo.png"
-                  alt="Cove Fire and Rescue logo"
-                  width={140}
-                  height={140}
-                  className="h-28 w-auto drop-shadow-md sm:h-32"
-                  unoptimized
+                  src={heroStationImage.url}
+                  alt={heroStationImage.alt}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 400px"
+                  priority
                 />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-brand-charcoal/90 via-brand-charcoal/50 to-transparent px-4 pb-4 pt-12">
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <p className="text-lg font-bold text-white">Station 91</p>
+                      <p className="text-sm font-medium text-brand-gold">Chambers County, Texas</p>
+                    </div>
+                    <Image
+                      src="/logo.png"
+                      alt=""
+                      width={56}
+                      height={56}
+                      className="h-14 w-auto shrink-0 drop-shadow-md"
+                      unoptimized
+                      aria-hidden
+                    />
+                  </div>
+                </div>
               </div>
-              <p className="mt-5 text-center text-lg font-bold text-white">Est. {siteConfig.yearsInService} Years</p>
-              <p className="mt-1 text-center text-sm font-medium text-brand-gold">Chambers County, Texas</p>
-              <div className="mt-5 rounded-lg border border-dashed border-white/30 bg-brand-charcoal/40 px-4 py-6 text-center">
-                <p className="text-xs font-semibold uppercase tracking-wider text-brand-gold">
-                  Photo coming soon
-                </p>
-                <p className="mt-2 text-sm text-gray-200">
-                  Apparatus, station, or crew image will appear here when provided.
-                </p>
-              </div>
+              <p className="border-t border-brand-gold/30 bg-brand-blue/40 px-4 py-3 text-center text-sm font-semibold text-white">
+                Est. {siteConfig.yearsInService} Years of Service
+              </p>
             </div>
           </div>
         </div>
