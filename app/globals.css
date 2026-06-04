@@ -108,3 +108,42 @@ h3,
   border-radius: 999px;
   margin-bottom: 1rem;
 }
+
+.contact-section {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+}
+
+.contact-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .contact-columns {
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+    align-items: stretch;
+  }
+}
+
+.contact-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.contact-column-card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.contact-map-frame {
+  flex: 1 1 auto;
+  min-height: 320px;
+  width: 100%;
+  border: 0;
+}

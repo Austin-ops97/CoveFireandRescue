@@ -1,6 +1,4 @@
 import { HomeAboutSection } from "@/components/site/HomeAboutSection";
-import { HomeAnnouncementsPreview } from "@/components/site/HomeAnnouncementsPreview";
-import { HomeFleetPreview } from "@/components/site/HomeFleetPreview";
 import { HomeHero } from "@/components/site/HomeHero";
 import { HomeJoinSection } from "@/components/site/HomeJoinSection";
 import { HomeQuickActions } from "@/components/site/HomeQuickActions";
@@ -14,8 +12,6 @@ export default function HomePage() {
       <HomeStatsBar />
       <HomeAboutSection />
       <HomeJoinSection />
-      <HomeAnnouncementsPreview />
-      <HomeFleetPreview />
     </>
   );
 }
