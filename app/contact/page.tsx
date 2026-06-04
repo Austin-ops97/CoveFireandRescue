@@ -14,76 +14,42 @@ export const metadata: Metadata = {
 };
 
 export default function ContactPage() {
-  const { social } = siteConfig;
-
   return (
     <PageShell
       title="Contact Us"
       description="Non-emergency inquiries only. For emergencies, call 911."
     >
       <div className="grid gap-10 lg:grid-cols-2">
-        <div className="space-y-8">
-          <section>
-            <SectionHeader title="Station Information" />
-            <Card>
-              <ContactInfoBlock />
-            </Card>
-          </section>
+        <section>
+          <SectionHeader title="Station Information" />
+          <Card>
+            <ContactInfoBlock />
+          </Card>
+        </section>
 
-          <section>
-            <SectionHeader title="Find Us Online" />
-            <Card>
-              <ul className="space-y-3 text-sm">
-                <li>
-                  <a
-                    href={social.facebook}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold text-brand-blue hover:underline"
-                  >
-                    Facebook — Cove Fire and Rescue
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href={social.googleBusiness}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold text-brand-blue hover:underline"
-                  >
-                    Google Business Profile
-                  </a>
-                </li>
-              </ul>
-            </Card>
-          </section>
-        </div>
+        <section>
+          <SectionHeader title="Map & Directions" />
+          <Card className="overflow-hidden p-0">
+            <iframe
+              title="Cove Fire & Rescue station location"
+              src={siteConfig.mapsEmbedUrl}
+              className="aspect-video w-full border-0"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+            />
+          </Card>
+        </section>
 
-        <div className="space-y-8">
-          <section>
-            <SectionHeader title="Map & Directions" />
-            <Card className="overflow-hidden p-0">
-              <iframe
-                title="Cove Fire & Rescue station location"
-                src={siteConfig.mapsEmbedUrl}
-                className="aspect-video w-full border-0"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
-              />
-            </Card>
-          </section>
-
-          <section>
-            <SectionHeader title="Send a Message" />
-            <Card>
-              <p className="mb-4 text-xs text-brand-gray">
-                Messages are delivered to {siteConfig.contact.formEmail}. For emergencies, call 911.
-              </p>
-              <ContactForm />
-            </Card>
-          </section>
-        </div>
+        <section className="lg:col-span-2">
+          <SectionHeader title="Send a Message" />
+          <Card>
+            <p className="mb-4 text-xs text-brand-gray">
+              Messages are delivered to {siteConfig.contact.formEmail}. For emergencies, call 911.
+            </p>
+            <ContactForm />
+          </Card>
+        </section>
       </div>
     </PageShell>
   );
