@@ -21,32 +21,32 @@
   --shadow-ui: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
   --shadow-ui-md: 0 4px 12px rgb(0 0 0 / 0.06);
 
-  /* Type scale shifted +2 steps (e.g. text-sm renders at former text-lg size) */
-  --text-xs: 1rem;
-  --text-xs--line-height: 1.5rem;
-  --text-sm: 1.125rem;
-  --text-sm--line-height: 1.75rem;
-  --text-base: 1.25rem;
+  /* Type scale shifted +1 step (e.g. text-sm renders at former text-base size) */
+  --text-xs: 0.875rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 1rem;
+  --text-sm--line-height: 1.5rem;
+  --text-base: 1.125rem;
   --text-base--line-height: 1.75rem;
-  --text-lg: 1.5rem;
-  --text-lg--line-height: 2rem;
-  --text-xl: 1.875rem;
-  --text-xl--line-height: 2.25rem;
-  --text-2xl: 2.25rem;
-  --text-2xl--line-height: 2.5rem;
-  --text-3xl: 3rem;
-  --text-3xl--line-height: 1;
-  --text-4xl: 3.75rem;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 2rem;
+  --text-2xl: 1.875rem;
+  --text-2xl--line-height: 2.25rem;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 2.5rem;
+  --text-4xl: 3rem;
   --text-4xl--line-height: 1;
-  --text-5xl: 4.5rem;
+  --text-5xl: 3.75rem;
   --text-5xl--line-height: 1;
-  --text-6xl: 6rem;
+  --text-6xl: 4.5rem;
   --text-6xl--line-height: 1;
-  --text-7xl: 8rem;
+  --text-7xl: 6rem;
   --text-7xl--line-height: 1;
-  --text-8xl: 9rem;
+  --text-8xl: 8rem;
   --text-8xl--line-height: 1;
-  --text-9xl: 10rem;
+  --text-9xl: 9rem;
   --text-9xl--line-height: 1;
 }
 
