@@ -32,7 +32,7 @@ export function HomeHero() {
             <p className="text-sm font-bold uppercase tracking-widest text-brand-gold">
               Volunteer Fire Department · {siteConfig.tagline}
             </p>
-            <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl lg:text-[3.25rem] lg:leading-tight">
+            <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl lg:text-[3.75rem] lg:leading-tight">
               {siteConfig.name}
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-gray-100 sm:text-xl">
@@ -94,7 +94,7 @@ export function HomeHero() {
               key={stat.label}
               className="rounded-lg border border-brand-gold/30 bg-white/5 px-3 py-4 text-center shadow-sm sm:px-4"
             >
-              <p className="text-xs font-bold uppercase tracking-wide text-brand-gold sm:text-[0.7rem]">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-gold">
                 {stat.label}
               </p>
             </li>

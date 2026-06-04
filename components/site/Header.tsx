@@ -53,9 +53,9 @@ export function Header() {
           <Image
             src="/logo.png"
             alt="Cove Fire & Rescue — Chambers County volunteer fire department"
-            width={80}
-            height={80}
-            className="h-[3.25rem] w-auto shrink-0 sm:h-[3.75rem]"
+            width={92}
+            height={92}
+            className="h-[3.74rem] w-auto shrink-0 sm:h-[4.31rem]"
             priority
             unoptimized
           />
@@ -105,13 +105,13 @@ export function Header() {
       {mobileOpen && (
         <>
           <div
-            className="fixed inset-0 top-[65px] z-40 bg-black/25 backdrop-blur-[1px] lg:hidden"
+            className="fixed inset-0 top-[74px] z-40 bg-black/25 backdrop-blur-[1px] lg:hidden"
             aria-hidden
             onClick={() => setMobileOpen(false)}
           />
           <nav
             id="mobile-menu"
-            className="fixed left-0 right-0 top-[65px] z-50 max-h-[calc(100dvh-65px)] overflow-y-auto border-t border-brand-gold/40 bg-white shadow-lg lg:hidden"
+            className="fixed left-0 right-0 top-[74px] z-50 max-h-[calc(100dvh-74px)] overflow-y-auto border-t border-brand-gold/40 bg-white shadow-lg lg:hidden"
             aria-label="Mobile navigation"
           >
             <ul className="flex flex-col gap-1 p-3">
