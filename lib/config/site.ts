@@ -32,6 +32,9 @@ export const siteConfig = {
   historyPreview:
     "Cove Fire & Rescue began with volunteers meeting in the Old Cove Community Building and an old fire truck purchased from neighboring Mont Belvieu for $1.00. Built through volunteer labor, fundraising, and community commitment, the department continues to carry forward the same spirit of service today.",
 
+  historyCondensed:
+    "Cove Fire & Rescue began when volunteers met in the Old Cove Community Building and towed home a fire truck purchased from Mont Belvieu for $1.00. Built through fundraising, volunteer labor, and shared dedication, the department has carried that same spirit of service forward for more than five decades.",
+
   serviceArea:
     "Chambers County — including incorporated areas of Cove, unincorporated surrounding areas, and mutual aid districts across the region.",
 

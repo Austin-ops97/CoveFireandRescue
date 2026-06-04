@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { HomeAboutSection } from "@/components/site/HomeAboutSection";
 import { HomeAnnouncementsPreview } from "@/components/site/HomeAnnouncementsPreview";
 import { HomeApparatusFeature } from "@/components/site/HomeApparatusFeature";
 import { HomeHero } from "@/components/site/HomeHero";
+import { HomeServicesSection } from "@/components/site/HomeServicesSection";
 import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
 import { SectionHeader } from "@/components/site/SectionHeader";
@@ -16,10 +18,10 @@ const quickActions = [
     label: "View updates",
   },
   {
-    title: "Our Services",
-    description: "Fire protection, EMS support, mutual aid, and community response.",
-    href: "/services",
-    label: "What we do",
+    title: "Leadership",
+    description: "Meet the officers and leaders serving our department.",
+    href: "/leadership",
+    label: "View leadership",
   },
   {
     title: "Fleet & Apparatus",
@@ -42,110 +44,36 @@ export default function HomePage() {
 
       <div className="h-1 bg-gradient-to-r from-transparent via-brand-gold to-transparent" aria-hidden />
 
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-        <SectionLabel>Community Resources</SectionLabel>
-        <SectionHeader
-          title="Quick Actions"
-          subtitle="Find department updates, services, apparatus, and contact information."
-          centered
-        />
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {quickActions.map((action) => (
-            <Link key={action.href} href={action.href} className="group block h-full">
-              <Card hover variant="elevated" className="h-full border-t-4 border-t-brand-gold">
-                <h3 className="text-lg font-bold text-brand-charcoal group-hover:text-brand-blue transition-colors">
-                  {action.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-brand-gray">{action.description}</p>
-                <span className="mt-4 inline-block text-sm font-semibold text-brand-blue">
-                  {action.label} →
-                </span>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </section>
+      <HomeAboutSection />
+      <HomeServicesSection />
 
-      <HomeApparatusFeature />
-
-      <section className="border-y border-brand-gold/25 bg-brand-gray-light">
+      <section className="border-y border-brand-gold/20 bg-brand-gray-light">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-          <div className="grid gap-10 lg:grid-cols-2">
-            <div>
-              <SectionLabel>Who We Serve</SectionLabel>
-              <SectionHeader title="Mission & Service Area" />
-              <Card variant="elevated">
-                <h3 className="text-sm font-bold uppercase tracking-wide text-brand-blue">Our Mission</h3>
-                <p className="mt-3 leading-relaxed text-brand-gray">{siteConfig.mission}</p>
-                <div className="my-6 h-px bg-brand-gold/30" />
-                <h3 className="text-sm font-bold uppercase tracking-wide text-brand-blue">Service Area</h3>
-                <p className="mt-3 leading-relaxed text-brand-gray">{siteConfig.serviceArea}</p>
-              </Card>
-            </div>
-            <div>
-              <SectionLabel>Always Training</SectionLabel>
-              <SectionHeader title="Ready to Respond" />
-              <Card variant="elevated" className="border-l-4 border-l-brand-gold h-full">
-                <p className="leading-relaxed text-brand-gray">{siteConfig.trainingCommitment}</p>
-                <Link
-                  href="/join"
-                  className="mt-6 inline-block text-sm font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40 focus-visible:ring-offset-2 rounded"
-                >
-                  Learn about joining →
-                </Link>
-              </Card>
-            </div>
+          <SectionLabel>Community Resources</SectionLabel>
+          <SectionHeader
+            title="Quick Actions"
+            subtitle="Find department updates, leadership, apparatus, and contact information."
+            centered
+          />
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {quickActions.map((action) => (
+              <Link key={action.href} href={action.href} className="group block h-full">
+                <Card hover variant="elevated" className="h-full border-t-4 border-t-brand-gold">
+                  <h3 className="text-lg font-bold text-brand-charcoal group-hover:text-brand-blue transition-colors">
+                    {action.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-brand-gray">{action.description}</p>
+                  <span className="mt-4 inline-block text-sm font-semibold text-brand-blue">
+                    {action.label} →
+                  </span>
+                </Card>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-        <SectionLabel>What We Do</SectionLabel>
-        <SectionHeader
-          title="Services"
-          subtitle="Professional volunteer fire and emergency response for Cove and Chambers County."
-        />
-        <div className="grid gap-5 sm:grid-cols-2">
-          {siteConfig.services.map((service) => (
-            <Card
-              key={service.id}
-              hover
-              variant={service.featured ? "elevated" : "default"}
-              className={service.featured ? "border-l-4 border-l-brand-blue sm:col-span-2" : ""}
-            >
-              {service.featured && (
-                <span className="mb-2 inline-block text-xs font-bold uppercase tracking-wider text-brand-gold-muted">
-                  Primary Service
-                </span>
-              )}
-              <h3 className="text-lg font-bold text-brand-charcoal">{service.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-brand-gray">{service.description}</p>
-            </Card>
-          ))}
-        </div>
-        <div className="mt-8 text-center">
-          <Button href="/services" variant="primary">
-            View All Services
-          </Button>
-        </div>
-      </section>
-
-      <section className="bg-white border-y border-gray-100">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-          <SectionLabel>Our Story</SectionLabel>
-          <SectionHeader
-            title={`${siteConfig.yearsInService} Years of Service`}
-            subtitle="Built by volunteers, sustained by community commitment."
-          />
-          <Card variant="muted" className="max-w-4xl">
-            <p className="text-base leading-relaxed text-brand-gray">{siteConfig.historyPreview}</p>
-            <Button href="/about" variant="outline" className="mt-6">
-              Read Full History
-            </Button>
-          </Card>
-        </div>
-      </section>
-
+      <HomeApparatusFeature />
       <HomeAnnouncementsPreview />
 
       <section className="bg-brand-blue text-white">
