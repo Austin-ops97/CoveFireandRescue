@@ -24,7 +24,7 @@ function PublicLeadershipCard({ member }: { member: LeadershipMemberRecord }) {
           <span className="text-sm font-medium">Photo coming soon</span>
         </div>
       )}
-      <p className="text-xs font-semibold uppercase tracking-wider text-brand-red">{member.rank}</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-brand-orange">{member.rank}</p>
       <h3 className="mt-1 text-xl font-bold text-brand-charcoal">{member.name}</h3>
       {member.title ? (
         <p className="mt-1 text-sm font-medium text-brand-gray">{member.title}</p>
@@ -38,7 +38,7 @@ function PublicLeadershipCard({ member }: { member: LeadershipMemberRecord }) {
             <li>
               <a
                 href={`mailto:${member.email}`}
-                className="font-medium text-brand-red hover:underline"
+                className="font-medium text-brand-blue hover:underline"
               >
                 {member.email}
               </a>
@@ -46,7 +46,7 @@ function PublicLeadershipCard({ member }: { member: LeadershipMemberRecord }) {
           ) : null}
           {member.phone ? (
             <li>
-              <a href={`tel:${member.phone}`} className="font-medium text-brand-red hover:underline">
+              <a href={`tel:${member.phone}`} className="font-medium text-brand-blue hover:underline">
                 {member.phone}
               </a>
             </li>

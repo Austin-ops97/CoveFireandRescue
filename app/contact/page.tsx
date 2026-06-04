@@ -33,7 +33,7 @@ export default function ContactPage() {
                   <dd className="mt-1">
                     <a
                       href="mailto:info@covefirerescue.org"
-                      className="text-brand-red hover:underline"
+                      className="text-brand-blue hover:underline"
                     >
                       info@covefirerescue.org
                     </a>
@@ -82,7 +82,7 @@ export default function ContactPage() {
                     id="name"
                     name="name"
                     type="text"
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-red focus:outline-none focus:ring-1 focus:ring-brand-red"
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue"
                     placeholder="Your name"
                     disabled
                   />
@@ -95,7 +95,7 @@ export default function ContactPage() {
                     id="email"
                     name="email"
                     type="email"
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-red focus:outline-none focus:ring-1 focus:ring-brand-red"
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue"
                     placeholder="you@example.com"
                     disabled
                   />
@@ -108,7 +108,7 @@ export default function ContactPage() {
                     id="message"
                     name="message"
                     rows={4}
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-red focus:outline-none focus:ring-1 focus:ring-brand-red"
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue"
                     placeholder="Your message"
                     disabled
                   />

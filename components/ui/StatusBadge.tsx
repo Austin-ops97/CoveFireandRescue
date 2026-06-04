@@ -27,7 +27,7 @@ const variantStyles: Record<StatusVariant, string> = {
   published: "bg-emerald-50 text-emerald-800 ring-emerald-600/15",
   open: "bg-sky-50 text-sky-800 ring-sky-600/15",
   completed: "bg-emerald-50 text-emerald-800 ring-emerald-600/15",
-  admin: "bg-brand-red/10 text-brand-red ring-brand-red/20",
+  admin: "bg-brand-blue/10 text-brand-blue ring-brand-blue/20",
   member: "bg-gray-100 text-brand-charcoal ring-gray-500/10",
   pass: "bg-emerald-50 text-emerald-800 ring-emerald-600/15",
   fail: "bg-red-50 text-red-800 ring-red-600/15",

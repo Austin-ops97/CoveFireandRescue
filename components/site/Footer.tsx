@@ -5,7 +5,7 @@ const currentYear = new Date().getFullYear();
 
 export function Footer() {
   return (
-    <footer className="border-t border-gray-800/50 bg-brand-charcoal text-gray-300">
+    <footer className="border-t-4 border-brand-orange bg-brand-blue text-gray-200">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
           <div>
@@ -13,7 +13,7 @@ export function Footer() {
             <p className="mt-3 text-sm leading-relaxed">
               Serving our community with readiness, professionalism, and pride.
             </p>
-            <p className="mt-4 rounded-md border border-brand-red/40 bg-brand-red/10 px-3 py-2 text-sm font-semibold text-white">
+            <p className="mt-4 rounded-md border border-brand-red/50 bg-brand-red/20 px-3 py-2 text-sm font-semibold text-white">
               Emergency: Call 911
             </p>
           </div>

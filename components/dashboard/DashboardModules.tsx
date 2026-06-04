@@ -128,14 +128,14 @@ function ModuleCard({ module }: { module: DashboardModule }) {
       className={`group flex h-full flex-col ${!module.href ? "opacity-90" : ""}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h3 className="text-base font-semibold text-brand-charcoal transition-colors duration-150 group-hover:text-brand-red">
+        <h3 className="text-base font-semibold text-brand-charcoal transition-colors duration-150 group-hover:text-brand-blue">
           {module.title}
         </h3>
         <ModuleStatusBadge status={module.status} />
       </div>
       <p className="mt-2.5 flex-1 text-sm leading-relaxed text-brand-gray">{module.description}</p>
       {module.href ? (
-        <span className="mt-5 inline-flex items-center text-sm font-semibold text-brand-red">
+        <span className="mt-5 inline-flex items-center text-sm font-semibold text-brand-blue">
           Open module
           <span
             className="ml-1 transition-transform duration-150 group-hover:translate-x-0.5"
@@ -152,7 +152,7 @@ function ModuleCard({ module }: { module: DashboardModule }) {
     return (
       <Link
         href={module.href}
-        className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/40 focus-visible:ring-offset-2"
+        className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40 focus-visible:ring-offset-2"
       >
         {card}
       </Link>

@@ -33,8 +33,8 @@ const latestAnnouncements = announcements.slice(0, 3);
 export default function HomePage() {
   return (
     <>
-      <section className="relative overflow-hidden bg-brand-charcoal text-white">
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-charcoal via-brand-charcoal-light to-brand-red/30" />
+      <section className="relative overflow-hidden bg-brand-blue text-white">
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-blue via-brand-blue-light to-brand-orange/25" />
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
           <p className="text-sm font-semibold uppercase tracking-widest text-brand-gold">
             Official Department Site
@@ -45,7 +45,7 @@ export default function HomePage() {
           <p className="mt-6 max-w-2xl text-lg text-gray-300 sm:text-xl">
             Serving our community with readiness, professionalism, and pride.
           </p>
-          <p className="mt-6 inline-flex items-center rounded-md border border-brand-gold/40 bg-brand-red/20 px-4 py-2 text-sm font-semibold">
+          <p className="mt-6 inline-flex items-center rounded-md border border-brand-orange/50 bg-brand-red/25 px-4 py-2 text-sm font-semibold">
             For emergencies, call{" "}
             <a href="tel:911" className="ml-1 underline underline-offset-2 text-brand-gold">
               911
@@ -55,7 +55,7 @@ export default function HomePage() {
             <Button href="/join" variant="primary" size="lg">
               Join Our Team
             </Button>
-            <Button href="/contact" variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-brand-charcoal">
+            <Button href="/contact" variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-brand-blue">
               Contact Us
             </Button>
           </div>
@@ -72,11 +72,11 @@ export default function HomePage() {
           {quickActions.map((action) => (
             <Link key={action.href} href={action.href} className="group block h-full">
               <Card hover className="h-full">
-                <h3 className="text-lg font-bold text-brand-charcoal group-hover:text-brand-red transition-colors">
+                <h3 className="text-lg font-bold text-brand-charcoal group-hover:text-brand-blue transition-colors">
                   {action.title}
                 </h3>
                 <p className="mt-2 text-sm text-brand-gray">{action.description}</p>
-                <span className="mt-4 inline-block text-sm font-semibold text-brand-red">
+                <span className="mt-4 inline-block text-sm font-semibold text-brand-orange">
                   Learn more →
                 </span>
               </Card>

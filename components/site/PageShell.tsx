@@ -24,7 +24,7 @@ export function PageShell({
       <header className="mb-8 border-b border-gray-100 pb-8 sm:mb-10 sm:pb-10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 max-w-3xl">
-            <h1 className="text-2xl font-bold tracking-tight text-brand-charcoal sm:text-3xl lg:text-4xl">
+            <h1 className="text-2xl font-bold tracking-tight text-brand-blue sm:text-3xl lg:text-4xl">
               {title}
             </h1>
             {description && (

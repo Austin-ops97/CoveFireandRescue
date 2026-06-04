@@ -1,14 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-red: #8b1a1a;
-  --color-brand-red-dark: #6b1414;
-  --color-brand-charcoal: #1a1a1a;
-  --color-brand-charcoal-light: #2d2d2d;
-  --color-brand-gray: #6b7280;
-  --color-brand-gray-light: #f8f9fb;
-  --color-brand-gold: #c9a227;
-  --color-brand-gold-muted: #d4af37;
+  --color-brand-blue: #1b36a4;
+  --color-brand-blue-dark: #152a85;
+  --color-brand-blue-light: #2a45b8;
+  --color-brand-orange: #f7941d;
+  --color-brand-orange-dark: #d97d0a;
+  --color-brand-red: #a51c24;
+  --color-brand-red-dark: #841620;
+  --color-brand-charcoal: #1c2147;
+  --color-brand-charcoal-light: #2a3166;
+  --color-brand-gray: #64708a;
+  --color-brand-gray-light: #f4f6fb;
+  --color-brand-gold: #fdb913;
+  --color-brand-gold-muted: #e5a610;
 
   --radius-ui: 0.75rem;
   --radius-ui-lg: 1rem;
@@ -27,11 +32,11 @@ body {
 }
 
 ::selection {
-  @apply bg-brand-red/15 text-brand-charcoal;
+  @apply bg-brand-blue/15 text-brand-charcoal;
 }
 
 /* Consistent focus for native controls not wrapped by components */
 :focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-brand-red) 40%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--color-brand-blue) 40%, transparent);
   outline-offset: 2px;
 }

@@ -23,11 +23,11 @@ function PublicAnnouncementCard({ announcement }: { announcement: AnnouncementRe
   const publishedLabel = formatPublishedDate(announcement.publishedAt);
 
   return (
-    <Card hover className={announcement.pinned ? "ring-2 ring-brand-red/20" : ""}>
+    <Card hover className={announcement.pinned ? "ring-2 ring-brand-orange/30" : ""}>
       <div className="flex flex-wrap items-center gap-2">
         <Badge label={getCategoryLabel(announcement.category)} className="bg-brand-gray-light text-brand-charcoal" />
         {announcement.pinned && (
-          <Badge label="Pinned" className="bg-brand-red/15 text-brand-red" />
+          <Badge label="Pinned" className="bg-brand-orange/15 text-brand-orange-dark" />
         )}
         {publishedLabel && (
           <time className="text-sm text-brand-gray" dateTime={String(announcement.publishedAt)}>
