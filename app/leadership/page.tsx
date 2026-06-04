@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function LeadershipPage() {
   return (
     <PageShell
+      eyebrow="Command Staff"
       title="Leadership & Command Staff"
       description="The officers leading Cove Fire & Rescue with experience, accountability, and dedication."
     >

@@ -17,70 +17,72 @@ function PublicFleetCard({ unit }: { unit: FleetUnitRecord }) {
   const waterLabel = formatCapacity(unit.waterCapacityGallons, "gal");
 
   return (
-    <Card hover className="flex h-full flex-col">
+    <Card hover padding="none" className="fleet-card flex h-full flex-col overflow-hidden">
       {unit.primaryImageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={unit.primaryImageUrl}
           alt={`${unit.name} apparatus`}
-          className="mb-4 aspect-video w-full rounded-md object-cover"
+          className="aspect-video w-full object-cover"
         />
       ) : (
         <div
-          className="mb-4 flex aspect-video w-full items-center justify-center rounded-md bg-brand-charcoal/5 text-brand-gray"
+          className="flex aspect-video w-full items-center justify-center bg-gray-100 text-gray-500"
           aria-label={`Photo placeholder for ${unit.name}`}
         >
           <span className="text-sm font-medium">Apparatus photo coming soon</span>
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge label={unit.type} className="bg-brand-gray-light text-brand-charcoal" />
-        {unit.unitNumber ? (
-          <span className="text-sm font-semibold text-brand-gray">Unit {unit.unitNumber}</span>
+      <div className="flex flex-1 flex-col p-5 sm:p-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge label={unit.type} className="bg-gold-100 text-gold-600" />
+          {unit.unitNumber ? (
+            <span className="text-sm font-semibold text-gray-500">Unit {unit.unitNumber}</span>
+          ) : null}
+        </div>
+
+        <h3 className="mt-2 text-xl font-bold text-navy-900">{unit.name}</h3>
+
+        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          {unit.year ? (
+            <div>
+              <dt className="text-gray-500">Year</dt>
+              <dd className="font-medium text-text-dark">{unit.year}</dd>
+            </div>
+          ) : null}
+          {unit.manufacturer ? (
+            <div>
+              <dt className="text-gray-500">Manufacturer</dt>
+              <dd className="font-medium text-text-dark">{unit.manufacturer}</dd>
+            </div>
+          ) : null}
+          {unit.model ? (
+            <div>
+              <dt className="text-gray-500">Model</dt>
+              <dd className="font-medium text-text-dark">{unit.model}</dd>
+            </div>
+          ) : null}
+          {pumpLabel ? (
+            <div>
+              <dt className="text-gray-500">Pump Capacity</dt>
+              <dd className="font-medium text-text-dark">{pumpLabel}</dd>
+            </div>
+          ) : null}
+          {waterLabel ? (
+            <div>
+              <dt className="text-gray-500">Water Capacity</dt>
+              <dd className="font-medium text-text-dark">{waterLabel}</dd>
+            </div>
+          ) : null}
+        </dl>
+
+        {unit.equipmentNotes ? (
+          <p className="mt-4 flex-1 border-t border-gray-200 pt-4 text-sm leading-relaxed text-gray-500">
+            {unit.equipmentNotes}
+          </p>
         ) : null}
       </div>
-
-      <h3 className="mt-2 text-xl font-bold text-brand-charcoal">{unit.name}</h3>
-
-      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        {unit.year ? (
-          <div>
-            <dt className="text-brand-gray">Year</dt>
-            <dd className="font-medium text-brand-charcoal">{unit.year}</dd>
-          </div>
-        ) : null}
-        {unit.manufacturer ? (
-          <div>
-            <dt className="text-brand-gray">Manufacturer</dt>
-            <dd className="font-medium text-brand-charcoal">{unit.manufacturer}</dd>
-          </div>
-        ) : null}
-        {unit.model ? (
-          <div>
-            <dt className="text-brand-gray">Model</dt>
-            <dd className="font-medium text-brand-charcoal">{unit.model}</dd>
-          </div>
-        ) : null}
-        {pumpLabel ? (
-          <div>
-            <dt className="text-brand-gray">Pump Capacity</dt>
-            <dd className="font-medium text-brand-charcoal">{pumpLabel}</dd>
-          </div>
-        ) : null}
-        {waterLabel ? (
-          <div>
-            <dt className="text-brand-gray">Water Capacity</dt>
-            <dd className="font-medium text-brand-charcoal">{waterLabel}</dd>
-          </div>
-        ) : null}
-      </dl>
-
-      {unit.equipmentNotes ? (
-        <p className="mt-4 flex-1 border-t border-gray-100 pt-4 text-sm leading-relaxed text-brand-gray">
-          {unit.equipmentNotes}
-        </p>
-      ) : null}
     </Card>
   );
 }

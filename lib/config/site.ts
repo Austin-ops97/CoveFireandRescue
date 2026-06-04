@@ -5,12 +5,16 @@
 export const siteConfig = {
   name: "Cove Fire & Rescue",
   shortName: "Cove Fire & Rescue",
-  tagline: "Wild West",
+  tagline: "Chambers County, Texas",
   yearsInService: 54,
   industry: "Fire Department",
 
+  heroEyebrow: "Volunteer Fire Department · Chambers County, Texas",
+
   heroHeadline:
-    "Protecting Cove and West Chambers County with readiness, training, and volunteer pride.",
+    "Volunteer fire and emergency response serving Cove and West Chambers County.",
+
+  heroTagline: "Trained. Ready. Community-driven.",
 
   heroStationImage: {
     url: "https://gywtxy56gkl7cfua.public.blob.vercel-storage.com/unnamed-3.jpg",

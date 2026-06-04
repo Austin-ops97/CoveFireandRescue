@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 export default function AnnouncementsPage() {
   return (
     <PageShell
+      eyebrow="Department News"
       title="Department Updates"
       description="Official notices, training updates, events, and department news from Cove Fire & Rescue."
     >

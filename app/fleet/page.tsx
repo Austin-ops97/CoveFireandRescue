@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function FleetPage() {
   return (
     <PageShell
+      eyebrow="Apparatus"
       title="Fleet & Apparatus"
       description="Our engines, tankers, rescue units, and support vehicles ready to respond."
     >

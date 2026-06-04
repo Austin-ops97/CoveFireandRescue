@@ -10,7 +10,12 @@ import { FirebaseConfigDebug } from "@/components/auth/FirebaseConfigDebug";
 import { getFriendlyAuthErrorMessage } from "@/lib/firebase/errors";
 import { useAuth } from "@/hooks/useAuth";
 
-export function LoginForm() {
+interface LoginFormProps {
+  /** When true, renders without outer Card wrapper (for login page layout). */
+  embedded?: boolean;
+}
+
+export function LoginForm({ embedded = false }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { configured, loading, signInWithEmailPassword } = useAuth();
@@ -41,8 +46,8 @@ export function LoginForm() {
   const inputsDisabled = !configured || loading || submitting;
   const isLoading = submitting;
 
-  return (
-    <Card>
+  const formContent = (
+    <>
       <form className="space-y-5" onSubmit={handleSubmit} noValidate aria-label="Member login">
         <FormField id="email" label="Email" required>
           <Input
@@ -74,7 +79,7 @@ export function LoginForm() {
 
         {error && <AlertBanner variant="error">{error}</AlertBanner>}
 
-        <Button type="submit" className="w-full" disabled={inputsDisabled}>
+        <Button type="submit" variant="primary" className="w-full" disabled={inputsDisabled}>
           {isLoading
             ? "Signing in…"
             : configured
@@ -83,7 +88,7 @@ export function LoginForm() {
         </Button>
       </form>
 
-      <p className="mt-6 rounded-lg border border-gray-100 bg-brand-gray-light/80 px-4 py-3 text-sm leading-relaxed text-brand-charcoal">
+      <p className="mt-6 rounded-[10px] border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-relaxed text-text-dark">
         Member access is restricted to authorized Cove Fire &amp; Rescue personnel.
       </p>
 
@@ -96,6 +101,12 @@ export function LoginForm() {
       )}
 
       <FirebaseConfigDebug />
-    </Card>
+    </>
   );
+
+  if (embedded) {
+    return formContent;
+  }
+
+  return <Card>{formContent}</Card>;
 }

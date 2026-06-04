@@ -18,27 +18,27 @@ function PublicLeadershipCard({ member }: { member: LeadershipMemberRecord }) {
         />
       ) : (
         <div
-          className="mb-4 flex aspect-[4/5] w-full items-center justify-center rounded-md bg-brand-gray-light text-brand-gray"
+          className="mb-4 flex aspect-[4/5] w-full items-center justify-center rounded-md bg-gray-100 text-gray-500"
           aria-label={`Photo placeholder for ${member.name}`}
         >
           <span className="text-sm font-medium">Photo coming soon</span>
         </div>
       )}
-      <p className="text-xs font-semibold uppercase tracking-wider text-brand-orange">{member.rank}</p>
-      <h3 className="mt-1 text-xl font-bold text-brand-charcoal">{member.name}</h3>
+      <p className="text-xs font-bold uppercase tracking-wider text-gold-600">{member.rank}</p>
+      <h3 className="mt-1 text-xl font-bold text-navy-900">{member.name}</h3>
       {member.title ? (
-        <p className="mt-1 text-sm font-medium text-brand-gray">{member.title}</p>
+        <p className="mt-1 text-sm font-medium text-gray-500">{member.title}</p>
       ) : null}
       {member.bio ? (
-        <p className="mt-3 flex-1 text-sm leading-relaxed text-brand-gray">{member.bio}</p>
+        <p className="mt-3 flex-1 text-sm leading-relaxed text-gray-500">{member.bio}</p>
       ) : null}
       {(member.email || member.phone) && (
-        <ul className="mt-4 space-y-1 border-t border-gray-100 pt-4 text-sm text-brand-gray">
+        <ul className="mt-4 space-y-1 border-t border-gray-200 pt-4 text-sm text-gray-500">
           {member.email ? (
             <li>
               <a
                 href={`mailto:${member.email}`}
-                className="font-medium text-brand-blue hover:underline"
+                className="font-medium text-blue-700 hover:underline"
               >
                 {member.email}
               </a>
@@ -46,7 +46,7 @@ function PublicLeadershipCard({ member }: { member: LeadershipMemberRecord }) {
           ) : null}
           {member.phone ? (
             <li>
-              <a href={`tel:${member.phone}`} className="font-medium text-brand-blue hover:underline">
+              <a href={`tel:${member.phone}`} className="font-medium text-blue-700 hover:underline">
                 {member.phone}
               </a>
             </li>

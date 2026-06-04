@@ -1,33 +1,56 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-blue: #1b36a4;
-  --color-brand-blue-dark: #152a85;
-  --color-brand-blue-light: #2a45b8;
-  --color-brand-orange: #f7941d;
-  --color-brand-orange-dark: #d97d0a;
-  --color-brand-red: #a51c24;
-  --color-brand-red-dark: #841620;
-  --color-brand-charcoal: #1c2147;
-  --color-brand-charcoal-light: #2a3166;
-  --color-brand-gray: #64708a;
-  --color-brand-gray-light: #f4f6fb;
-  --color-brand-gold: #fdb913;
-  --color-brand-gold-muted: #e5a610;
+  /* Mature public-safety palette */
+  --color-navy-950: #071733;
+  --color-navy-900: #0b1f4d;
+  --color-navy-800: #102b66;
+  --color-blue-700: #193c8f;
 
-  --radius-ui: 0.75rem;
-  --radius-ui-lg: 1rem;
-  --shadow-ui-sm: 0 1px 2px rgb(0 0 0 / 0.04);
-  --shadow-ui: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
-  --shadow-ui-md: 0 4px 12px rgb(0 0 0 / 0.06);
+  --color-gold-500: #f5a400;
+  --color-gold-600: #c47a00;
+  --color-gold-100: #fff3d1;
 
-  /* Type scale shifted +1 step (e.g. text-sm renders at former text-base size) */
+  --color-red-700: #a6192e;
+  --color-red-800: #861426;
+
+  --color-off-white: #f7f8fa;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f2f4f7;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d0d5dd;
+  --color-gray-500: #667085;
+  --color-gray-700: #344054;
+  --color-text-dark: #111827;
+
+  /* Legacy brand tokens mapped to new palette */
+  --color-brand-blue: #0b1f4d;
+  --color-brand-blue-dark: #071733;
+  --color-brand-blue-light: #193c8f;
+  --color-brand-orange: #f5a400;
+  --color-brand-orange-dark: #c47a00;
+  --color-brand-red: #a6192e;
+  --color-brand-red-dark: #861426;
+  --color-brand-charcoal: #111827;
+  --color-brand-charcoal-light: #344054;
+  --color-brand-gray: #667085;
+  --color-brand-gray-light: #f7f8fa;
+  --color-brand-gold: #f5a400;
+  --color-brand-gold-muted: #c47a00;
+
+  --radius-ui: 0.625rem;
+  --radius-ui-lg: 0.75rem;
+  --shadow-ui-sm: 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-ui: 0 8px 24px rgb(16 24 40 / 0.06);
+  --shadow-ui-md: 0 10px 30px rgb(16 24 40 / 0.1);
+  --shadow-ui-lg: 0 14px 34px rgb(16 24 40 / 0.1);
+
   --text-xs: 0.875rem;
   --text-xs--line-height: 1.25rem;
   --text-sm: 1rem;
   --text-sm--line-height: 1.5rem;
-  --text-base: 1.125rem;
-  --text-base--line-height: 1.75rem;
+  --text-base: 1.05rem;
+  --text-base--line-height: 1.65rem;
   --text-lg: 1.25rem;
   --text-lg--line-height: 1.75rem;
   --text-xl: 1.5rem;
@@ -37,17 +60,17 @@
   --text-3xl: 2.25rem;
   --text-3xl--line-height: 2.5rem;
   --text-4xl: 3rem;
-  --text-4xl--line-height: 1;
+  --text-4xl--line-height: 0.95;
   --text-5xl: 3.75rem;
-  --text-5xl--line-height: 1;
+  --text-5xl--line-height: 0.95;
   --text-6xl: 4.5rem;
-  --text-6xl--line-height: 1;
+  --text-6xl--line-height: 0.95;
   --text-7xl: 6rem;
-  --text-7xl--line-height: 1;
+  --text-7xl--line-height: 0.95;
   --text-8xl: 8rem;
-  --text-8xl--line-height: 1;
+  --text-8xl--line-height: 0.95;
   --text-9xl: 9rem;
-  --text-9xl--line-height: 1;
+  --text-9xl--line-height: 0.95;
 }
 
 html {
@@ -55,17 +78,33 @@ html {
 }
 
 body {
-  @apply bg-white text-base text-brand-charcoal antialiased;
+  @apply bg-off-white text-base text-text-dark antialiased;
   font-family: var(--font-sans), system-ui, sans-serif;
   font-feature-settings: "kern" 1, "liga" 1;
 }
 
-::selection {
-  @apply bg-brand-blue/15 text-brand-charcoal;
+h1,
+h2,
+h3,
+.section-title {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  letter-spacing: -0.02em;
 }
 
-/* Consistent focus for native controls not wrapped by components */
+::selection {
+  @apply bg-blue-700/15 text-text-dark;
+}
+
 :focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-brand-blue) 40%, transparent);
-  outline-offset: 2px;
+  outline: 3px solid rgb(245 164 0 / 0.55);
+  outline-offset: 3px;
+}
+
+.action-card-accent {
+  display: block;
+  width: 3rem;
+  height: 0.25rem;
+  background: var(--color-gold-500);
+  border-radius: 999px;
+  margin-bottom: 1rem;
 }

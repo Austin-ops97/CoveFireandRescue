@@ -7,6 +7,7 @@ export interface NavLink {
 
 export const mainNavLinks: NavLink[] = [
   { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
   { href: "/leadership", label: "Leadership" },
   { href: "/fleet", label: "Fleet" },
   { href: "/announcements", label: "Updates" },
@@ -16,10 +17,11 @@ export const mainNavLinks: NavLink[] = [
 ];
 
 export const footerQuickLinks: NavLink[] = [
+  { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
   { href: "/leadership", label: "Leadership" },
   { href: "/fleet", label: "Fleet" },
   { href: "/announcements", label: "Updates" },
-  { href: "/gallery", label: "Gallery" },
   { href: "/join", label: "Join Us" },
   { href: "/contact", label: "Contact" },
   { href: "/login", label: "Member Login" },

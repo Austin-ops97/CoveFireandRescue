@@ -13,10 +13,10 @@ interface CardProps {
 }
 
 const variantClasses: Record<CardVariant, string> = {
-  default: "border-gray-100/80 bg-white shadow-sm",
-  muted: "border-gray-100 bg-brand-gray-light/50 shadow-none",
-  accent: "border-brand-blue/15 bg-brand-blue/[0.03] shadow-none",
-  elevated: "border-gray-100/80 bg-white shadow-md",
+  default: "border-gray-200 bg-white shadow-ui",
+  muted: "border-gray-200 bg-gray-50 shadow-none",
+  accent: "border-blue-700/15 bg-blue-700/[0.03] shadow-none",
+  elevated: "border-gray-200 bg-white shadow-ui",
 };
 
 const paddingClasses: Record<CardPadding, string> = {
@@ -38,7 +38,7 @@ export function Card({
     <Component
       className={`rounded-xl border ${variantClasses[variant]} ${paddingClasses[padding]} ${
         hover
-          ? "transition-[box-shadow,transform,border-color] duration-200 hover:border-gray-200 hover:shadow-md motion-safe:hover:-translate-y-0.5"
+          ? "transition-[box-shadow,transform,border-color] duration-200 hover:border-gray-200 hover:shadow-ui-lg motion-safe:hover:-translate-y-0.5"
           : ""
       } ${className}`}
     >

@@ -13,50 +13,77 @@ export const metadata: Metadata = {
   keywords: [...siteConfig.seo.keywords],
 };
 
+const volunteerBenefits = [
+  "Protect your neighbors and community when it matters most",
+  "Train with experienced volunteers twice each week",
+  "Develop fire, rescue, and emergency response skills",
+  "Be part of a respected Chambers County institution",
+] as const;
+
+const requirements = [
+  "Minimum age requirement as determined by department policy",
+  "Willingness to attend regular training sessions",
+  "Commitment to serving the community with professionalism",
+  "Ability to pass a background check",
+] as const;
+
 export default function JoinPage() {
   return (
     <PageShell
+      eyebrow="Volunteer With Us"
       title="Join Cove Fire & Rescue"
-      description="Make a difference in your community. We welcome dedicated volunteers ready to train and serve."
+      description="Make a difference in your community. No prior experience is required — training, equipment, and support are provided."
       narrow
     >
       <section className="mb-12">
-        <SectionHeader title="Volunteer Service" />
+        <SectionHeader
+          title="Why Volunteer?"
+          subtitle="Cove Fire & Rescue depends on dedicated volunteers willing to serve their community."
+        />
         <Card>
-          <p className="text-brand-gray leading-relaxed">
+          <p className="leading-relaxed text-gray-500">
             Cove Fire &amp; Rescue is a volunteer fire department built on neighbors helping neighbors.
             Members train twice each week, respond when the community needs help, and uphold the standards
-            that have defined our department for {siteConfig.yearsInService} years. Serving is demanding
-            and rewarding — if you are ready to commit time, effort, and teamwork, we would like to hear
-            from you.
+            that have defined our department for {siteConfig.yearsInService} years.
           </p>
-        </Card>
-      </section>
-
-      <section className="mb-12">
-        <SectionHeader title="Why Serve With Us?" />
-        <Card>
-          <ul className="list-inside list-disc space-y-2 text-brand-gray">
-            <li>Protect your neighbors and community when it matters most</li>
-            <li>Train with experienced volunteers twice each week</li>
-            <li>Join a department with deep roots in Cove, Texas</li>
-            <li>Develop fire, rescue, and emergency response skills</li>
-            <li>Be part of a respected Chambers County institution</li>
+          <ul className="mt-4 list-inside list-disc space-y-2 text-gray-500">
+            {volunteerBenefits.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
           </ul>
         </Card>
       </section>
 
       <section className="mb-12">
-        <SectionHeader title="Application Form" />
+        <SectionHeader title="What Volunteers Do" subtitle="Hands-on emergency response and community service." />
+        <Card>
+          <p className="leading-relaxed text-gray-500">{siteConfig.trainingCommitment}</p>
+          <p className="mt-3 leading-relaxed text-gray-500">{siteConfig.mission}</p>
+        </Card>
+      </section>
+
+      <section className="mb-12">
+        <SectionHeader title="Requirements" />
+        <Card>
+          <ul className="list-inside list-disc space-y-2 text-gray-500">
+            {requirements.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </Card>
+      </section>
+
+      <section className="mb-12">
+        <SectionHeader title="How to Apply" subtitle="Complete the application form below to start the volunteer process." />
         <Card>
           <ApplicationForm />
         </Card>
       </section>
 
       <section className="text-center">
-        <Card className="border-brand-blue/20 bg-brand-gray-light">
-          <h3 className="text-lg font-bold text-brand-charcoal">Questions before you apply?</h3>
-          <p className="mt-2 text-sm text-brand-gray">
+        <Card className="border-navy-900/10 bg-gray-50">
+          <h3 className="text-lg font-bold text-navy-900">Questions before you apply?</h3>
+          <p className="mt-2 text-sm text-gray-500">
             Contact us during station meeting hours or send a non-emergency message.
           </p>
           <div className="mt-6">

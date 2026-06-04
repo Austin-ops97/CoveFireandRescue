@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/site/Badge";
 import { Button } from "@/components/site/Button";
@@ -25,16 +26,22 @@ function PreviewCard({ announcement }: { announcement: AnnouncementRecord }) {
       : announcement.body;
 
   return (
-    <Card hover className={announcement.pinned ? "ring-2 ring-brand-gold/40" : ""}>
+    <Card hover className={announcement.pinned ? "ring-2 ring-gold-500/40" : ""}>
       <div className="flex flex-wrap items-center gap-2">
-        <Badge label={getCategoryLabel(announcement.category)} className="bg-brand-gray-light text-brand-charcoal" />
+        <Badge label={getCategoryLabel(announcement.category)} className="bg-gold-100 text-gold-600" />
         {announcement.pinned && (
-          <Badge label="Pinned" className="bg-brand-gold/20 text-brand-charcoal" />
+          <Badge label="Pinned" className="bg-gray-100 text-gray-700" />
         )}
-        {publishedLabel && <time className="text-sm text-brand-gray">{publishedLabel}</time>}
+        {publishedLabel && <time className="text-sm text-gray-500">{publishedLabel}</time>}
       </div>
-      <h3 className="mt-3 text-lg font-bold text-brand-charcoal">{announcement.title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-brand-gray">{excerpt}</p>
+      <h3 className="mt-3 text-lg font-bold text-navy-900">{announcement.title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-gray-500">{excerpt}</p>
+      <Link
+        href="/announcements"
+        className="mt-4 inline-block text-sm font-bold text-blue-700 hover:underline"
+      >
+        Read More →
+      </Link>
     </Card>
   );
 }
@@ -69,10 +76,11 @@ export function HomeAnnouncementsPreview() {
   }, []);
 
   return (
-    <section className="bg-brand-gray-light">
+    <section className="bg-off-white">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <SectionHeader
-          title="Department Updates"
+          eyebrow="Department News"
+          title="Latest Department Updates"
           subtitle="Recent announcements from Cove Fire & Rescue."
         />
 
@@ -99,7 +107,7 @@ export function HomeAnnouncementsPreview() {
               ))}
             </div>
             <div className="mt-8 text-center">
-              <Button href="/announcements" variant="secondary">
+              <Button href="/announcements" variant="primary">
                 View All Updates
               </Button>
             </div>

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Source_Sans_3 } from "next/font/google";
+import { Barlow_Condensed, Source_Sans_3 } from "next/font/google";
 import { AppProviders } from "@/app/providers";
 import { EmergencyBanner } from "@/components/site/EmergencyBanner";
 import { Footer } from "@/components/site/Footer";
@@ -12,6 +12,12 @@ const sourceSans = Source_Sans_3({
   variable: "--font-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+});
+
+const barlowCondensed = Barlow_Condensed({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -43,7 +49,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1b36a4",
+  themeColor: "#0B1F4D",
   width: "device-width",
   initialScale: 1,
 };
@@ -56,7 +62,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${sourceSans.variable} flex min-h-screen flex-col font-sans antialiased`}
+        className={`${sourceSans.variable} ${barlowCondensed.variable} flex min-h-screen flex-col font-sans antialiased`}
       >
         <LocalBusinessJsonLd />
         <AppProviders>
