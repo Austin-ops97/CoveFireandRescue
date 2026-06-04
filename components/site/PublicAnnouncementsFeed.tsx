@@ -87,8 +87,8 @@ export function PublicAnnouncementsFeed() {
   if (announcements.length === 0) {
     return (
       <EmptyState
-        title="No published announcements yet"
-        description="Check back soon for burn ban notices, training updates, events, and department news."
+        title="No current updates"
+        description="No current updates. Please check back soon."
       />
     );
   }

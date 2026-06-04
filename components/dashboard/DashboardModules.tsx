@@ -80,6 +80,24 @@ const moduleGroups: ModuleGroup[] = [
         href: "/dashboard/leadership",
         status: "admin_only",
       },
+      {
+        title: "Gallery Manager",
+        description: "Manage public photo gallery images.",
+        href: "/dashboard/gallery",
+        status: "admin_only",
+      },
+      {
+        title: "Volunteer Applications",
+        description: "Review applications from the public Join Us page.",
+        href: "/dashboard/applications",
+        status: "admin_only",
+      },
+      {
+        title: "Contact Submissions",
+        description: "Review messages from the public contact form.",
+        href: "/dashboard/contact-submissions",
+        status: "admin_only",
+      },
     ],
   },
   {

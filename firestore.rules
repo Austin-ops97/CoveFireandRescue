@@ -72,5 +72,22 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false;
     }
+
+    // Public writes use server API routes (Admin SDK). Client rules are least-privilege.
+
+    match /applications/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /contactSubmissions/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /gallery/{id} {
+      allow read: if resource.data.visible == true || isAdmin();
+      allow write: if isAdmin();
+    }
   }
 }

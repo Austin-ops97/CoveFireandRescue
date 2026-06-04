@@ -1,6 +1,9 @@
 export const COLLECTIONS = {
   users: "users",
   announcements: "announcements",
+  applications: "applications",
+  contactSubmissions: "contactSubmissions",
+  gallery: "gallery",
   fleet: "fleet",
   leadership: "leadership",
   checklistTemplates: "checklistTemplates",
@@ -15,6 +18,14 @@ export const userDocPath = (uid: string): string => `${COLLECTIONS.users}/${uid}
 
 export const announcementDocPath = (id: string): string =>
   `${COLLECTIONS.announcements}/${id}`;
+
+export const applicationDocPath = (id: string): string =>
+  `${COLLECTIONS.applications}/${id}`;
+
+export const contactSubmissionDocPath = (id: string): string =>
+  `${COLLECTIONS.contactSubmissions}/${id}`;
+
+export const galleryDocPath = (id: string): string => `${COLLECTIONS.gallery}/${id}`;
 
 export const fleetDocPath = (id: string): string => `${COLLECTIONS.fleet}/${id}`;
 

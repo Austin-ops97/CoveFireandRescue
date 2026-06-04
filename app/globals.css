@@ -28,6 +28,7 @@ html {
 
 body {
   @apply bg-white text-brand-charcoal antialiased;
+  font-family: var(--font-sans), system-ui, sans-serif;
   font-feature-settings: "kern" 1, "liga" 1;
 }
 

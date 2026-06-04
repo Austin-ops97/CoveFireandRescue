@@ -3,14 +3,15 @@ import { PublicAnnouncementsFeed } from "@/components/site/PublicAnnouncementsFe
 import { PageShell } from "@/components/site/PageShell";
 
 export const metadata: Metadata = {
-  title: "Announcements",
-  description: "Public announcements and community notices from Cove Fire & Rescue.",
+  title: "Department Updates",
+  description:
+    "Official department updates, training notices, events, and community announcements from Cove Fire & Rescue.",
 };
 
 export default function AnnouncementsPage() {
   return (
     <PageShell
-      title="Announcements & Community Board"
+      title="Department Updates"
       description="Official notices, training updates, events, and department news from Cove Fire & Rescue."
     >
       <PublicAnnouncementsFeed />

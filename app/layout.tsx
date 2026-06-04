@@ -1,34 +1,44 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Source_Sans_3 } from "next/font/google";
 import { AppProviders } from "@/app/providers";
 import { EmergencyBanner } from "@/components/site/EmergencyBanner";
 import { Footer } from "@/components/site/Footer";
 import { Header } from "@/components/site/Header";
+import { LocalBusinessJsonLd } from "@/components/site/LocalBusinessJsonLd";
+import { siteConfig } from "@/lib/config/site";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const sourceSans = Source_Sans_3({
+  variable: "--font-sans",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "Cove Fire & Rescue",
+    default: "Cove Fire & Rescue | Volunteer Fire Department Cove TX",
     template: "%s | Cove Fire & Rescue",
   },
-  description:
-    "Cove Fire & Rescue — Serving our community with readiness, professionalism, and pride.",
-  applicationName: "Cove Fire & Rescue",
+  description: siteConfig.seo.defaultDescription,
+  keywords: [...siteConfig.seo.keywords],
+  applicationName: siteConfig.name,
   manifest: "/manifest.webmanifest",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: siteConfig.name,
+    title: siteConfig.name,
+    description: siteConfig.seo.defaultDescription,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.name,
+    description: siteConfig.seo.defaultDescription,
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Cove Fire & Rescue",
+    title: siteConfig.name,
   },
 };
 
@@ -46,8 +56,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} flex min-h-screen flex-col font-sans antialiased`}
+        className={`${sourceSans.variable} flex min-h-screen flex-col font-sans antialiased`}
       >
+        <LocalBusinessJsonLd />
         <AppProviders>
           <EmergencyBanner />
           <Header />
