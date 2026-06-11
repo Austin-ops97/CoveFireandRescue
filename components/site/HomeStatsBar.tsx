@@ -7,7 +7,10 @@ export function HomeStatsBar() {
         <ul className="grid grid-cols-2 gap-6 sm:grid-cols-4 sm:gap-8">
           {siteConfig.heroStats.map((stat) => (
             <li key={stat.label} className="text-center">
-              <p className="stat-value text-sm font-extrabold text-gold-500 sm:text-base lg:text-lg">
+              <p className="text-2xl font-extrabold tracking-tight text-gold-500 sm:text-3xl">
+                {stat.value}
+              </p>
+              <p className="mt-1 text-xs font-semibold leading-snug text-white/85 sm:text-sm">
                 {stat.label}
               </p>
             </li>

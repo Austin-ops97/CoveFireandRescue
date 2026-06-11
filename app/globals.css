@@ -147,3 +147,9 @@ h3,
   width: 100%;
   border: 0;
 }
+
+/* Hero CTA on dark backgrounds — prevent inherited text-white from hiding button labels */
+.hero-buttons a.contact-button {
+  color: var(--color-navy-900);
+  background-color: #fff;
+}

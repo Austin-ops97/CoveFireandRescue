@@ -50,11 +50,11 @@ export default function AboutPage() {
         />
         <Card>
           <p className="leading-relaxed text-gray-500">{siteConfig.historyCondensed}</p>
-          <p className="mt-4 leading-relaxed text-gray-500">{departmentHistory.slice(0, 600)}…</p>
+          <p className="mt-4 leading-relaxed text-gray-500">{departmentHistory}</p>
         </Card>
       </section>
 
-      <section className="mt-12">
+      <section id="services" className="mt-12 scroll-mt-24">
         <SectionHeader title="What We Do" subtitle="Core services provided to Cove and surrounding areas." />
         <div className="grid gap-5 sm:grid-cols-2">
           {siteConfig.services.map((service) => (

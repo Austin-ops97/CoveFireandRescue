@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/site/Button";
 import { AlertBanner } from "@/components/ui";
 import { submitContactMessage } from "@/lib/contact/client";
-import { inputBase } from "@/lib/ui/classes";
+import { inputBase, textareaBase } from "@/lib/ui/classes";
 
 export function ContactForm() {
   const [name, setName] = useState("");
@@ -100,7 +100,7 @@ export function ContactForm() {
           name="message"
           required
           rows={5}
-          className={`mt-1 ${inputBase}`}
+          className={`mt-1 ${textareaBase}`}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
         />

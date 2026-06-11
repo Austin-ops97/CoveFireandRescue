@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/site/Button";
 import { AlertBanner, CheckboxField } from "@/components/ui";
 import { submitApplication } from "@/lib/applications/client";
-import { inputBase } from "@/lib/ui/classes";
+import { inputBase, textareaBase } from "@/lib/ui/classes";
 
 export function ApplicationForm() {
   const [fullName, setFullName] = useState("");
@@ -136,7 +136,7 @@ export function ApplicationForm() {
           id="priorExperience"
           name="priorExperience"
           rows={3}
-          className={`mt-1 ${inputBase}`}
+          className={`mt-1 ${textareaBase}`}
           placeholder="None required — share any relevant background."
           value={priorExperience}
           onChange={(e) => setPriorExperience(e.target.value)}
@@ -151,7 +151,7 @@ export function ApplicationForm() {
           id="availability"
           name="availability"
           rows={3}
-          className={`mt-1 ${inputBase}`}
+          className={`mt-1 ${textareaBase}`}
           placeholder="Days/times you can typically respond or attend training."
           value={availability}
           onChange={(e) => setAvailability(e.target.value)}
@@ -167,7 +167,7 @@ export function ApplicationForm() {
           name="reasonForJoining"
           required
           rows={4}
-          className={`mt-1 ${inputBase}`}
+          className={`mt-1 ${textareaBase}`}
           value={reasonForJoining}
           onChange={(e) => setReasonForJoining(e.target.value)}
         />

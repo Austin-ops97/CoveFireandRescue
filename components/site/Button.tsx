@@ -35,7 +35,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   heroSecondary:
     "border border-white/25 bg-white/10 text-white shadow-md hover:border-white/35 hover:bg-white/18 hover:text-white focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900",
   heroTertiary:
-    "border border-white bg-white text-navy-900 shadow-md visited:text-navy-900 active:text-navy-900 hover:border-white hover:bg-gray-100 hover:text-navy-900 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900",
+    "!border-white !bg-white !text-navy-900 shadow-md visited:!text-navy-900 active:!text-navy-900 hover:!border-white hover:!bg-gray-100 hover:!text-navy-900 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

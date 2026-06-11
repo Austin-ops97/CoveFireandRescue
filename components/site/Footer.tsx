@@ -15,12 +15,11 @@ export function Footer() {
           <div className="lg:col-span-1">
             <Image
               src="/logo.png"
-              alt=""
+              alt="Cove Fire & Rescue logo"
               width={72}
               height={72}
               className="mb-4 h-16 w-auto"
               unoptimized
-              aria-hidden
             />
             <p className="text-lg font-bold text-white">{siteConfig.name}</p>
             <p className="mt-1 text-sm font-semibold text-gold-500">Chambers County, Texas</p>

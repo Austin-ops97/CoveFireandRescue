@@ -31,8 +31,8 @@ export function HomeAboutSection() {
           <Card padding="none" className="overflow-hidden">
             <div className="relative aspect-[4/3] w-full">
               <Image
-                src={siteConfig.heroStationImage.url}
-                alt={siteConfig.heroStationImage.alt}
+                src={siteConfig.homeApparatusImage.url}
+                alt={siteConfig.homeApparatusImage.alt}
                 fill
                 className="department-image object-cover"
                 sizes="(max-width: 1024px) 100vw, 560px"

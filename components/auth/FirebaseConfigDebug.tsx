@@ -5,6 +5,8 @@ import { getFirebaseClientDebugInfo } from "@/lib/firebase/config";
 const isDev = process.env.NODE_ENV === "development";
 
 export function FirebaseConfigDebug() {
+  if (!isDev) return null;
+
   const info = getFirebaseClientDebugInfo();
 
   return (

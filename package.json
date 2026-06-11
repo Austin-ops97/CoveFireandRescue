@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "check:env": "node scripts/check-env.mjs"
+    "check:env": "node scripts/check-env.mjs",
+    "sync:vercel-firebase": "node scripts/sync-vercel-firebase-env.mjs"
   },
   "dependencies": {
     "firebase": "^12.14.0",
