@@ -792,6 +792,31 @@ export async function deleteStorageFile(params: {
   }
 
   await adminDb.collection(COLLECTIONS.storageFiles).doc(file.id).delete();
+  await deleteLinkedLegacyDocumentRecord(file);
+}
+
+async function deleteLinkedLegacyDocumentRecord(file: StorageFileRecord): Promise<void> {
+  if (file.legacySourceId?.trim()) {
+    const legacyRef = adminDb.collection(COLLECTIONS.files).doc(file.legacySourceId.trim());
+    const legacySnap = await legacyRef.get();
+    if (legacySnap.exists) {
+      await legacyRef.delete();
+    }
+    return;
+  }
+
+  if (!file.b2Key) return;
+
+  const legacyMatches = await adminDb
+    .collection(COLLECTIONS.files)
+    .where("module", "==", "documents")
+    .where("b2Key", "==", file.b2Key)
+    .limit(1)
+    .get();
+
+  if (!legacyMatches.empty) {
+    await legacyMatches.docs[0].ref.delete();
+  }
 }
 
 export async function searchStorage(params: {

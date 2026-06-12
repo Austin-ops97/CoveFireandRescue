@@ -20,7 +20,6 @@ import {
   deleteStorageFile,
   deleteStorageFolder,
   fetchStorageTree,
-  migrateLegacyStorageFiles,
   moveStorageFile,
   moveStorageFolder,
   renameStorageFile,
@@ -234,8 +233,6 @@ export function FileStorageManager() {
     };
   }, []);
 
-  const migratedRef = useRef(false);
-
   const load = useCallback(async () => {
     setError(null);
     const [treeData, browseData] = await Promise.all([
@@ -252,14 +249,6 @@ export function FileStorageManager() {
       setLoading(true);
       setError(null);
       try {
-        if (canWrite && !migratedRef.current) {
-          migratedRef.current = true;
-          try {
-            await migrateLegacyStorageFiles();
-          } catch {
-            // Migration is best-effort on first load.
-          }
-        }
         if (!cancelled) await load();
       } catch (err) {
         if (!cancelled) {

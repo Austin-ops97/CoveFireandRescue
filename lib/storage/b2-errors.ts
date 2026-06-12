@@ -36,8 +36,10 @@ export function shouldClearMetadataAfterB2DeleteFailure(error: unknown): boolean
   return (
     message.includes("file_not_present") ||
     message.includes("file_not_found") ||
+    message.includes("not_found") ||
     message.includes("no_such") ||
     message.includes("not found") ||
+    message.includes("does not exist") ||
     message.includes("bad_file_id") ||
     message.includes("bad_request")
   );
