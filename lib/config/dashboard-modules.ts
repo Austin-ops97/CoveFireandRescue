@@ -158,7 +158,8 @@ export type DashboardNavItem = {
   exactNavMatch?: boolean;
 };
 
-export function getVisibleDashboardNavItems(isAdmin: boolean): DashboardNavItem[] {
+export function getVisibleDashboardNavItems(role: string | null | undefined): DashboardNavItem[] {
+  const isAdmin = role === "admin";
   const items: DashboardNavItem[] = [{ label: "Dashboard", href: "/dashboard" }];
 
   for (const group of dashboardModuleGroups) {
