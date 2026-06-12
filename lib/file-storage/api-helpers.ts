@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/audit/server";
 import type { AuditAction } from "@/lib/audit/types";
 import type { VerifiedServerUser } from "@/lib/auth/server";
-import { ServerAuthError, requireServerRole, serverAuthErrorResponse } from "@/lib/auth/server";
+import {
+  ServerAuthError,
+  requireDashboardAccess,
+  requireManageContent,
+  serverAuthErrorResponse,
+} from "@/lib/auth/server";
 import {
   assertFileStoragePermission,
   canReadFileStorage,
@@ -33,19 +38,19 @@ export function handleFileStorageError(error: unknown): Response {
 }
 
 export async function requireStorageReader(request: Request): Promise<VerifiedServerUser> {
-  const user = await requireServerRole(request, ["admin", "member"]);
+  const user = await requireDashboardAccess(request);
   assertFileStoragePermission(user, "read");
   return user;
 }
 
 export async function requireStorageWriter(request: Request): Promise<VerifiedServerUser> {
-  const user = await requireServerRole(request, ["admin"]);
+  const user = await requireManageContent(request);
   assertFileStoragePermission(user, "write");
   return user;
 }
 
 export async function requireStorageDeleter(request: Request): Promise<VerifiedServerUser> {
-  const user = await requireServerRole(request, ["admin"]);
+  const user = await requireManageContent(request);
   assertFileStoragePermission(user, "delete");
   return user;
 }

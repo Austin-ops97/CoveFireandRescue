@@ -13,6 +13,7 @@ import { galleryCategories } from "@/lib/config/site";
 import { deleteGalleryItem, fetchAdminGallery, saveGalleryItem } from "@/lib/gallery/client";
 import { getCategoryLabel } from "@/lib/gallery/types";
 import type { GalleryFormState, GalleryRecord } from "@/lib/gallery/types";
+import { uploadImageToB2 } from "@/lib/storage/client";
 import { inputBase } from "@/lib/ui/classes";
 
 const emptyForm: GalleryFormState = {
@@ -28,8 +29,10 @@ export function GalleryManager() {
   const [form, setForm] = useState<GalleryFormState>(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -63,10 +66,46 @@ export function GalleryManager() {
   function resetForm() {
     setForm(emptyForm);
     setMessage(null);
+    setUploadError(null);
+  }
+
+  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setUploadingImage(true);
+    setUploadError(null);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const uploaded = await uploadImageToB2({
+        file,
+        module: "gallery",
+        relatedId: form.id ?? null,
+      });
+      setForm((current) => ({
+        ...current,
+        imageUrl: uploaded.publicUrl,
+        altText:
+          !current.altText.trim() && current.title.trim() ? current.title.trim() : current.altText,
+      }));
+      setMessage("Image uploaded. Finish the form and save the gallery photo.");
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Failed to upload image.");
+    } finally {
+      setUploadingImage(false);
+    }
   }
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
+    if (!form.imageUrl.trim()) {
+      setError("Upload an image or enter an image URL.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     setMessage(null);
@@ -151,19 +190,52 @@ export function GalleryManager() {
               </select>
             </div>
           </div>
-          <div>
-            <label htmlFor="gallery-url" className="block text-sm font-medium">
-              Image URL
-            </label>
-            <input
-              id="gallery-url"
-              required
-              type="url"
-              placeholder="https://..."
-              className={`mt-1 ${inputBase}`}
-              value={form.imageUrl}
-              onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-            />
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-brand-charcoal">Photo</p>
+            <div>
+              <label htmlFor="gallery-upload" className="block text-sm font-medium">
+                Upload image
+              </label>
+              <input
+                id="gallery-upload"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                disabled={uploadingImage || saving}
+                onChange={(event) => void handleImageUpload(event)}
+                className="mt-1 block w-full text-sm text-brand-gray file:mr-3 file:rounded-md file:border-0 file:bg-brand-red file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
+              />
+              <p className="mt-1 text-xs text-brand-gray">
+                JPEG, PNG, WebP, HEIC, or HEIF up to 4.5 MB.
+              </p>
+            </div>
+            <div>
+              <label htmlFor="gallery-url" className="block text-sm font-medium">
+                Or image URL
+              </label>
+              <input
+                id="gallery-url"
+                type="url"
+                placeholder="https://..."
+                className={`mt-1 ${inputBase}`}
+                value={form.imageUrl}
+                onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
+              />
+            </div>
+            {form.imageUrl && (
+              <div className="overflow-hidden rounded-md border border-gray-200">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={form.imageUrl}
+                  alt={form.altText || "Gallery preview"}
+                  className="aspect-video w-full object-cover"
+                />
+              </div>
+            )}
+            {uploadError && (
+              <p className="text-sm font-medium text-brand-red" role="alert">
+                {uploadError}
+              </p>
+            )}
           </div>
           <div>
             <label htmlFor="gallery-alt" className="block text-sm font-medium">
@@ -184,7 +256,7 @@ export function GalleryManager() {
             onChange={(visible) => setForm((f) => ({ ...f, visible }))}
           />
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" variant="primary" disabled={saving}>
+            <Button type="submit" variant="primary" disabled={saving || uploadingImage}>
               {saving ? "Saving…" : form.id ? "Update Photo" : "Add Photo"}
             </Button>
             {form.id && (
@@ -201,7 +273,7 @@ export function GalleryManager() {
       ) : items.length === 0 ? (
         <EmptyState
           title="No gallery photos"
-          description="Add image URLs to display photos on the public gallery page."
+          description="Upload photos or add image URLs to display them on the public gallery page."
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

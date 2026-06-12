@@ -1,10 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/audit/server";
-import {
-  requireServerRole,
-  serverAuthErrorResponse,
-} from "@/lib/auth/server";
+import { requireManageContent, serverAuthErrorResponse } from "@/lib/auth/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firestore/collections";
 import { serializeChecklistTemplateDoc } from "@/lib/checklist/server";
@@ -18,7 +15,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const actor = await requireServerRole(request, ["admin"]);
+    const actor = await requireManageContent(request);
     const { id } = await context.params;
 
     if (!id?.trim()) {

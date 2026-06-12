@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
 import {
-  requireServerRole,
+  requireDashboardAccess,
   serverAuthErrorResponse,
   type VerifiedServerUser,
 } from "@/lib/auth/server";
@@ -167,7 +167,7 @@ async function buildMemberSummary(user: VerifiedServerUser): Promise<DashboardSu
 
 export async function GET(request: Request) {
   try {
-    const user = await requireServerRole(request, ["admin", "member"]);
+    const user = await requireDashboardAccess(request);
 
     const summary: DashboardSummary =
       user.role === "admin"

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  requireServerRole,
+  requireDashboardAccess,
   serverAuthErrorResponse,
 } from "@/lib/auth/server";
 import { adminDb } from "@/lib/firebase/admin";
@@ -12,7 +12,7 @@ import {
 
 export async function GET(request: Request) {
   try {
-    await requireServerRole(request, ["admin", "member"]);
+    await requireDashboardAccess(request);
 
     const snapshot = await adminDb
       .collection(COLLECTIONS.checklistTemplates)

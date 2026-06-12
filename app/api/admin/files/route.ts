@@ -4,7 +4,7 @@ import {
   StorageValidationError,
 } from "@/lib/storage/server";
 import type { StoredFileModule } from "@/lib/storage/types";
-import { requireServerRole, serverAuthErrorResponse } from "@/lib/auth/server";
+import { requireManageContent, serverAuthErrorResponse } from "@/lib/auth/server";
 
 const ALLOWED_LIST_MODULES: StoredFileModule[] = ["documents"];
 
@@ -14,7 +14,7 @@ function badRequest(message: string): Response {
 
 export async function GET(request: Request) {
   try {
-    await requireServerRole(request, ["admin"]);
+    await requireManageContent(request);
 
     const { searchParams } = new URL(request.url);
     const moduleParam = searchParams.get("module")?.trim() ?? "documents";

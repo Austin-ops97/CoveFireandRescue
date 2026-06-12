@@ -1,6 +1,12 @@
 export type AuditAction =
   | "user.profile.created"
   | "user.profile.updated"
+  | "user.created"
+  | "user.updated"
+  | "user.disabled"
+  | "user.deleted"
+  | "user.role_changed"
+  | "user.password_reset"
   | "storage.upload.requested"
   | "storage.upload.completed"
   | "storage.upload.failed"
@@ -34,7 +40,7 @@ export type AuditLogEntry = {
   id: string;
   action: AuditAction;
   actorUid: string;
-  actorRole: "admin" | "member";
+  actorRole: "admin" | "editor" | "viewer" | "member";
   targetType?: string;
   targetId?: string;
   message?: string;

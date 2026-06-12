@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  requireServerRole,
+  requireDashboardAccess,
   serverAuthErrorResponse,
 } from "@/lib/auth/server";
 import { getStoredFilesByIds } from "@/lib/storage/server";
@@ -9,7 +9,7 @@ const MAX_IDS = 50;
 
 export async function GET(request: Request) {
   try {
-    await requireServerRole(request, ["admin", "member"]);
+    await requireDashboardAccess(request);
 
     const { searchParams } = new URL(request.url);
     const idsParam = searchParams.get("ids")?.trim() ?? "";

@@ -1,6 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/audit/server";
+import type { UserRole } from "@/lib/auth/roles";
 import {
   requireServerRole,
   serverAuthErrorResponse,
@@ -20,11 +21,11 @@ function badRequest(message: string): Response {
 
 export async function POST(request: Request) {
   let actorUid = "unknown";
-  let actorRole: "admin" | "member" = "admin";
+  let actorRole: UserRole = "admin";
   let targetId = "storage";
 
   try {
-    const actor = await requireServerRole(request, ["admin", "member"]);
+    const actor = await requireServerRole(request, ["admin", "editor", "member"]);
     actorUid = actor.uid;
     actorRole = actor.role!;
 

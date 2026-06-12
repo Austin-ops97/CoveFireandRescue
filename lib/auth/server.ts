@@ -1,13 +1,19 @@
 import "server-only";
 
 import type { DecodedIdToken } from "firebase-admin/auth";
+import {
+  DASHBOARD_ROLES,
+  MANAGE_CONTENT_ROLES,
+  type UserRole,
+  isUserRole,
+} from "@/lib/auth/roles";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firestore/collections";
 
 export type VerifiedServerUser = {
   uid: string;
   email: string | null;
-  role: "admin" | "member" | null;
+  role: UserRole | null;
   active: boolean;
   displayName: string | null;
 };
@@ -31,8 +37,8 @@ function extractBearerToken(request: Request): string | null {
   return token || null;
 }
 
-function readProfileRole(value: unknown): "admin" | "member" | null {
-  if (value === "admin" || value === "member") return value;
+function readProfileRole(value: unknown): UserRole | null {
+  if (isUserRole(value)) return value;
   return null;
 }
 
@@ -107,7 +113,7 @@ export async function requireServerUser(request: Request): Promise<VerifiedServe
 
 export async function requireServerRole(
   request: Request,
-  allowedRoles: Array<"admin" | "member">
+  allowedRoles: UserRole[]
 ): Promise<VerifiedServerUser> {
   const user = await requireServerUser(request);
 
@@ -120,6 +126,18 @@ export async function requireServerRole(
   }
 
   return user;
+}
+
+export async function requireManageContent(request: Request): Promise<VerifiedServerUser> {
+  return requireServerRole(request, MANAGE_CONTENT_ROLES);
+}
+
+export async function requireManageUsers(request: Request): Promise<VerifiedServerUser> {
+  return requireServerRole(request, ["admin"]);
+}
+
+export async function requireDashboardAccess(request: Request): Promise<VerifiedServerUser> {
+  return requireServerRole(request, DASHBOARD_ROLES);
 }
 
 export function serverAuthErrorResponse(error: unknown): Response {

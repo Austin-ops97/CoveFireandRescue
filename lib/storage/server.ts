@@ -15,6 +15,7 @@ const ALLOWED_MODULES: StoredFileModule[] = [
   "fleet",
   "rounds",
   "leadership",
+  "gallery",
   "documents",
 ];
 
@@ -256,6 +257,7 @@ export function validateCompleteUploadRequest(input: unknown): CompleteB2UploadR
 export const ALLOWED_UPLOAD_MODULES = [
   "fleet",
   "leadership",
+  "gallery",
   "rounds",
   "documents",
 ] as const;
@@ -266,6 +268,7 @@ export function assertAllowedUploadModule(fileModule: StoredFileModule): Allowed
   if (
     fileModule === "fleet" ||
     fileModule === "leadership" ||
+    fileModule === "gallery" ||
     fileModule === "rounds" ||
     fileModule === "documents"
   ) {

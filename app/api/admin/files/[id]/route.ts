@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/audit/server";
-import { requireServerRole, serverAuthErrorResponse } from "@/lib/auth/server";
+import { requireManageContent, serverAuthErrorResponse } from "@/lib/auth/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firestore/collections";
 import { serializeStoredFileDoc } from "@/lib/storage/server";
@@ -11,7 +11,7 @@ type RouteContext = {
 
 export async function DELETE(request: Request, context: RouteContext) {
   try {
-    const actor = await requireServerRole(request, ["admin"]);
+    const actor = await requireManageContent(request);
     const { id } = await context.params;
 
     if (!id?.trim()) {

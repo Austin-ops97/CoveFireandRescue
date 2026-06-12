@@ -107,8 +107,8 @@ const moduleGroups: ModuleGroup[] = [
     adminOnly: true,
     modules: [
       {
-        title: "User Access",
-        description: "Manage member accounts, roles, and active status.",
+        title: "Manage Users",
+        description: "Create accounts, assign roles, and control member access.",
         href: "/dashboard/users",
         status: "admin_only",
       },

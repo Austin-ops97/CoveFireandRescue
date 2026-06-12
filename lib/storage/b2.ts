@@ -9,7 +9,7 @@ const B2_ENV_KEYS = [
   "B2_PUBLIC_BASE_URL",
 ] as const;
 
-type B2Module = "announcements" | "fleet" | "rounds" | "leadership" | "documents";
+type B2Module = "announcements" | "fleet" | "rounds" | "leadership" | "gallery" | "documents";
 
 type B2EnvConfig = {
   applicationKeyId: string;

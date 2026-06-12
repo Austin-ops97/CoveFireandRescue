@@ -9,7 +9,7 @@ import {
 } from "@/lib/checklist/server";
 import type { ChecklistTemplateFormState } from "@/lib/checklist/types";
 import {
-  requireServerRole,
+  requireManageContent,
   serverAuthErrorResponse,
   type VerifiedServerUser,
 } from "@/lib/auth/server";
@@ -40,7 +40,7 @@ async function writeTemplateAudit(
 
 export async function GET(request: Request) {
   try {
-    await requireServerRole(request, ["admin"]);
+    await requireManageContent(request);
 
     const snapshot = await adminDb.collection(COLLECTIONS.checklistTemplates).limit(100).get();
 
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const actor = await requireServerRole(request, ["admin"]);
+    const actor = await requireManageContent(request);
 
     let body: PostBody;
     try {

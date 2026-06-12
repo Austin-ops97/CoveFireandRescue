@@ -2,6 +2,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/audit/server";
 import {
+  requireDashboardAccess,
   requireServerRole,
   serverAuthErrorResponse,
 } from "@/lib/auth/server";
@@ -42,7 +43,7 @@ async function resolveFleetUnitName(fleetUnitId: string | null): Promise<string 
 
 export async function GET(request: Request) {
   try {
-    const user = await requireServerRole(request, ["admin", "member"]);
+    const user = await requireDashboardAccess(request);
     const { searchParams } = new URL(request.url);
 
     const snapshot = await adminDb.collection(COLLECTIONS.checklistSubmissions).limit(300).get();
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
       scope,
       relatedFleetUnitId: searchParams.get("relatedFleetUnitId")?.trim() || undefined,
       submittedBy:
-        user.role === "admin"
+        user.role === "admin" || user.role === "editor"
           ? searchParams.get("submittedBy")?.trim() || undefined
           : undefined,
       fromDate: searchParams.get("fromDate")?.trim() || undefined,
@@ -88,7 +89,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const actor = await requireServerRole(request, ["admin", "member"]);
+    const actor = await requireServerRole(request, ["admin", "editor", "member"]);
 
     let body: ChecklistSubmissionPayload;
     try {

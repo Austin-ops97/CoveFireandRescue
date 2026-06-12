@@ -98,7 +98,7 @@ export async function resolveStoredFiles(
 
 async function uploadFileToB2(params: {
   file: File;
-  module: "fleet" | "leadership" | "rounds" | "documents";
+  module: "fleet" | "leadership" | "gallery" | "rounds" | "documents";
   relatedId?: string | null;
 }): Promise<StoredFileRecord> {
   const formData = new FormData();
@@ -127,7 +127,7 @@ async function uploadFileToB2(params: {
 
 export async function uploadImageToB2(params: {
   file: File;
-  module: "fleet" | "leadership" | "rounds";
+  module: "fleet" | "leadership" | "gallery" | "rounds";
   relatedId?: string | null;
 }): Promise<StoredFileRecord> {
   validateImageFile(params.file);

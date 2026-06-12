@@ -14,7 +14,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { UserRole } from "@/lib/auth/roles";
+import { isUserRole, type UserRole } from "@/lib/auth/roles";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { auth, getFirebaseDb, initFirebaseClient } from "@/lib/firebase/client";
 import { getUserProfile } from "@/lib/firebase/users";
@@ -37,9 +37,7 @@ export const AuthContext = createContext<AuthContextValue | undefined>(undefined
 
 function resolveRole(profile: UserProfile | null): UserRole | null {
   if (!profile) return null;
-  if (profile.role === "admin" || profile.role === "member") {
-    return profile.role;
-  }
+  if (isUserRole(profile.role)) return profile.role;
   return null;
 }
 
@@ -52,7 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const role = useMemo(() => resolveRole(profile), [profile]);
   const isAdmin = role === "admin" && profile?.active === true;
   const isMember =
-    profile?.active === true && (role === "member" || role === "admin");
+    profile?.active === true &&
+    (role === "member" || role === "admin" || role === "editor" || role === "viewer");
 
   const refreshProfile = useCallback(async () => {
     if (!user || !configured) {

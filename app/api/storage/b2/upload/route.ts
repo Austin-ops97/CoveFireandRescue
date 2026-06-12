@@ -12,6 +12,7 @@ import { uploadBytesToB2AndPersist } from "@/lib/storage/upload-server";
 const ALLOWED_MODULES: StoredFileModule[] = [
   "fleet",
   "leadership",
+  "gallery",
   "rounds",
   "documents",
 ];
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
   let actor: VerifiedServerUser | null = null;
 
   try {
-    actor = await requireServerRole(request, ["admin", "member"]);
+    actor = await requireServerRole(request, ["admin", "editor", "member"]);
 
     let formData: FormData;
     try {

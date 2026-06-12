@@ -1,6 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
-import { requireServerRole, serverAuthErrorResponse } from "@/lib/auth/server";
+import { requireManageContent, serverAuthErrorResponse } from "@/lib/auth/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firestore/collections";
 import {
@@ -17,7 +17,7 @@ function badRequest(message: string): Response {
 
 export async function GET(request: Request) {
   try {
-    await requireServerRole(request, ["admin"]);
+    await requireManageContent(request);
 
     const snapshot = await adminDb.collection(COLLECTIONS.equipment).limit(300).get();
 
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireServerRole(request, ["admin"]);
+    await requireManageContent(request);
 
     let body: EquipmentFormState;
     try {

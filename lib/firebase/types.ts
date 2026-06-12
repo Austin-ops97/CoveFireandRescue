@@ -1,13 +1,20 @@
-export type UserRole = "admin" | "member";
+import type { UserRole } from "@/lib/auth/roles";
+
+export type { UserRole };
 
 export type FirestoreTimestamp = unknown;
 
 export type UserProfile = {
   uid: string;
   email: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   displayName: string | null;
+  phone?: string | null;
+  title?: string | null;
   role: UserRole;
   active: boolean;
+  createdBy?: string | null;
   createdAt: FirestoreTimestamp;
   updatedAt: FirestoreTimestamp;
 };

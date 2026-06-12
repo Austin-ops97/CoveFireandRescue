@@ -1,7 +1,12 @@
 "use client";
 
 import { authenticatedFetch } from "@/lib/api/client";
-import type { ManagedUserFormState, ManagedUserProfile } from "@/lib/users/types";
+import type {
+  CreateUserFormState,
+  EditUserFormState,
+  ManagedUserProfile,
+  ResetPasswordFormState,
+} from "@/lib/users/types";
 
 async function readApiError(response: Response): Promise<string> {
   try {
@@ -27,20 +32,58 @@ export async function fetchManagedUsers(): Promise<ManagedUserProfile[]> {
   return Array.isArray(data.users) ? data.users : [];
 }
 
-export async function saveManagedUser(
-  payload: ManagedUserFormState
-): Promise<ManagedUserProfile> {
+export type CreateUserResult = {
+  user: ManagedUserProfile;
+  message: string;
+  passwordSetupLink: string | null;
+};
+
+export async function createManagedUser(
+  payload: CreateUserFormState
+): Promise<CreateUserResult> {
   const response = await authenticatedFetch("/api/admin/users", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      uid: payload.uid.trim(),
-      email: payload.email.trim() || null,
-      displayName: payload.displayName.trim() || null,
+      firstName: payload.firstName.trim(),
+      lastName: payload.lastName.trim(),
+      email: payload.email.trim(),
       role: payload.role,
       active: payload.active,
+      phone: payload.phone.trim() || null,
+      title: payload.title.trim() || null,
+      passwordMode: payload.passwordMode,
+      temporaryPassword:
+        payload.passwordMode === "temporary" ? payload.temporaryPassword : null,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+
+  const data = (await response.json()) as CreateUserResult;
+  if (!data.user) {
+    throw new Error("Server did not return the created user profile.");
+  }
+
+  return data;
+}
+
+export async function updateManagedUser(
+  uid: string,
+  payload: EditUserFormState
+): Promise<ManagedUserProfile> {
+  const response = await authenticatedFetch(`/api/admin/users/${encodeURIComponent(uid)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      firstName: payload.firstName.trim(),
+      lastName: payload.lastName.trim(),
+      role: payload.role,
+      active: payload.active,
+      phone: payload.phone.trim() || null,
+      title: payload.title.trim() || null,
     }),
   });
 
@@ -50,8 +93,58 @@ export async function saveManagedUser(
 
   const data = (await response.json()) as { user?: ManagedUserProfile };
   if (!data.user) {
-    throw new Error("Server did not return the saved user profile.");
+    throw new Error("Server did not return the updated user profile.");
   }
 
   return data.user;
+}
+
+export async function disableManagedUser(uid: string): Promise<void> {
+  const response = await authenticatedFetch(`/api/admin/users/${encodeURIComponent(uid)}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+}
+
+export async function deleteManagedUserPermanently(uid: string): Promise<void> {
+  const response = await authenticatedFetch(
+    `/api/admin/users/${encodeURIComponent(uid)}?permanent=true`,
+    { method: "DELETE" }
+  );
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+}
+
+export type ResetPasswordResult = {
+  message: string;
+  passwordSetupLink: string | null;
+};
+
+export async function resetManagedUserPassword(
+  uid: string,
+  payload: ResetPasswordFormState
+): Promise<ResetPasswordResult> {
+  const response = await authenticatedFetch(
+    `/api/admin/users/${encodeURIComponent(uid)}/reset-password`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: payload.mode,
+        temporaryPassword:
+          payload.mode === "temporary" ? payload.temporaryPassword : null,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+
+  return (await response.json()) as ResetPasswordResult;
 }

@@ -1,81 +1,110 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
 import {
   AlertBanner,
-  CheckboxField,
   EmptyState,
+  FormField,
+  Input,
   ListToolbar,
+  Modal,
+  Select,
   SkeletonTable,
   StatusBadge,
 } from "@/components/ui";
-import { inputBase } from "@/lib/ui/classes";
-import { fetchManagedUsers, saveManagedUser } from "@/lib/users/client";
-import type { ManagedUserFormState, ManagedUserProfile } from "@/lib/users/types";
+import { USER_ROLES, roleLabel } from "@/lib/auth/roles";
+import {
+  createManagedUser,
+  deleteManagedUserPermanently,
+  disableManagedUser,
+  fetchManagedUsers,
+  resetManagedUserPassword,
+  updateManagedUser,
+} from "@/lib/users/client";
+import type {
+  CreateUserFormState,
+  EditUserFormState,
+  ManagedUserProfile,
+  ManagedUserRole,
+  ResetPasswordFormState,
+} from "@/lib/users/types";
 
-const emptyForm: ManagedUserFormState = {
-  uid: "",
+const emptyCreateForm: CreateUserFormState = {
+  firstName: "",
+  lastName: "",
   email: "",
-  displayName: "",
   role: "member",
   active: true,
+  phone: "",
+  title: "",
+  passwordMode: "reset_link",
+  temporaryPassword: "",
+};
+
+const emptyEditForm: EditUserFormState = {
+  firstName: "",
+  lastName: "",
+  role: "member",
+  active: true,
+  phone: "",
+  title: "",
+};
+
+const emptyResetForm: ResetPasswordFormState = {
+  mode: "reset_link",
+  temporaryPassword: "",
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type ModalMode = "create" | "edit" | "reset" | "disable" | "delete" | null;
 
 function formatTimestamp(value: unknown): string {
   if (typeof value === "string") {
     const date = new Date(value);
     if (!Number.isNaN(date.getTime())) {
-      return date.toLocaleString(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      });
+      return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
     }
   }
   return "—";
 }
 
-function RoleBadge({ role }: { role: ManagedUserProfile["role"] }) {
-  return (
-    <StatusBadge
-      label={role === "admin" ? "Admin" : "Member"}
-      variant={role === "admin" ? "admin" : "member"}
-    />
-  );
+function roleBadgeVariant(role: ManagedUserRole) {
+  if (role === "admin") return "admin" as const;
+  if (role === "editor") return "info" as const;
+  if (role === "viewer") return "neutral" as const;
+  return "member" as const;
 }
 
-function UserStatusBadge({ active }: { active: boolean }) {
-  return <StatusBadge label={active ? "Active" : "Inactive"} variant={active ? "active" : "inactive"} />;
+function profileToEditForm(profile: ManagedUserProfile): EditUserFormState {
+  return {
+    firstName: profile.firstName ?? "",
+    lastName: profile.lastName ?? "",
+    role: profile.role,
+    active: profile.active,
+    phone: profile.phone ?? "",
+    title: profile.title ?? "",
+  };
 }
 
-function validateForm(form: ManagedUserFormState): string | null {
-  if (!form.uid.trim()) {
-    return "Firebase Auth UID is required.";
+function validateCreateForm(form: CreateUserFormState): string | null {
+  if (!form.firstName.trim()) return "First name is required.";
+  if (!form.lastName.trim()) return "Last name is required.";
+  if (!form.email.trim() || !EMAIL_PATTERN.test(form.email.trim())) {
+    return "A valid email address is required.";
   }
-
-  if (form.role !== "admin" && form.role !== "member") {
-    return "Role must be admin or member.";
+  if (form.passwordMode === "temporary" && form.temporaryPassword.length < 8) {
+    return "Temporary password must be at least 8 characters.";
   }
-
-  const email = form.email.trim();
-  if (email && !EMAIL_PATTERN.test(email)) {
-    return "Enter a valid email address or leave email blank.";
-  }
-
   return null;
 }
 
-function profileToForm(profile: ManagedUserProfile): ManagedUserFormState {
-  return {
-    uid: profile.uid,
-    email: profile.email ?? "",
-    displayName: profile.displayName ?? "",
-    role: profile.role,
-    active: profile.active,
-  };
+function validateEditForm(form: EditUserFormState): string | null {
+  if (!form.firstName.trim()) return "First name is required.";
+  if (!form.lastName.trim()) return "Last name is required.";
+  return null;
 }
 
 export function UserAccessManager() {
@@ -84,17 +113,23 @@ export function UserAccessManager() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [form, setForm] = useState<ManagedUserFormState>(emptyForm);
-  const [editingUid, setEditingUid] = useState<string | null>(null);
+  const [passwordSetupLink, setPasswordSetupLink] = useState<string | null>(null);
+
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<ManagedUserRole | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
+  const [selectedUser, setSelectedUser] = useState<ManagedUserProfile | null>(null);
+  const [createForm, setCreateForm] = useState<CreateUserFormState>(emptyCreateForm);
+  const [editForm, setEditForm] = useState<EditUserFormState>(emptyEditForm);
+  const [resetForm, setResetForm] = useState<ResetPasswordFormState>(emptyResetForm);
 
   const loadUsers = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     setLoadError(null);
 
     try {
@@ -112,100 +147,266 @@ export function UserAccessManager() {
     void loadUsers();
   }, [loadUsers]);
 
-  function resetForm() {
-    setForm(emptyForm);
-    setEditingUid(null);
-    setSaveError(null);
+  const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return users.filter((user) => {
+      if (roleFilter !== "all" && user.role !== roleFilter) return false;
+      if (statusFilter === "active" && !user.active) return false;
+      if (statusFilter === "inactive" && user.active) return false;
+      if (!query) return true;
+
+      const haystack = [
+        user.displayName,
+        user.firstName,
+        user.lastName,
+        user.email,
+        user.title,
+        user.phone,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(query);
+    });
+  }, [users, search, roleFilter, statusFilter]);
+
+  function closeModal() {
+    setModalMode(null);
+    setSelectedUser(null);
+    setActionError(null);
+    setCreateForm(emptyCreateForm);
+    setEditForm(emptyEditForm);
+    setResetForm(emptyResetForm);
   }
 
-  function handleEdit(user: ManagedUserProfile) {
-    setForm(profileToForm(user));
-    setEditingUid(user.uid);
-    setSaveError(null);
+  function openCreateModal() {
     setSuccessMessage(null);
+    setPasswordSetupLink(null);
+    setActionError(null);
+    setCreateForm(emptyCreateForm);
+    setModalMode("create");
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function openEditModal(user: ManagedUserProfile) {
+    setActionError(null);
+    setSelectedUser(user);
+    setEditForm(profileToEditForm(user));
+    setModalMode("edit");
+  }
+
+  function openResetModal(user: ManagedUserProfile) {
+    setActionError(null);
+    setSelectedUser(user);
+    setResetForm(emptyResetForm);
+    setPasswordSetupLink(null);
+    setModalMode("reset");
+  }
+
+  function openDisableModal(user: ManagedUserProfile) {
+    setActionError(null);
+    setSelectedUser(user);
+    setModalMode("disable");
+  }
+
+  function openDeleteModal(user: ManagedUserProfile) {
+    setActionError(null);
+    setSelectedUser(user);
+    setModalMode("delete");
+  }
+
+  async function handleCreateSubmit(event: React.FormEvent) {
     event.preventDefault();
-    setSaveError(null);
-    setSuccessMessage(null);
+    setActionError(null);
+    setPasswordSetupLink(null);
 
-    const validationError = validateForm(form);
+    const validationError = validateCreateForm(createForm);
     if (validationError) {
-      setSaveError(validationError);
+      setActionError(validationError);
       return;
     }
 
     setSaving(true);
     try {
-      const saved = await saveManagedUser(form);
+      const result = await createManagedUser(createForm);
       await loadUsers(true);
-      resetForm();
-      setSuccessMessage(
-        editingUid
-          ? `Updated access for ${saved.displayName || saved.uid}.`
-          : `Authorized ${saved.displayName || saved.uid} for dashboard access.`
-      );
+      closeModal();
+      setSuccessMessage(result.message);
+      if (result.passwordSetupLink) {
+        setPasswordSetupLink(result.passwordSetupLink);
+      }
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Failed to save user profile.");
+      setActionError(error instanceof Error ? error.message : "Failed to create user.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleEditSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selectedUser) return;
+    setActionError(null);
+
+    const validationError = validateEditForm(editForm);
+    if (validationError) {
+      setActionError(validationError);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateManagedUser(selectedUser.uid, editForm);
+      await loadUsers(true);
+      closeModal();
+      setSuccessMessage("User updated successfully.");
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to update user.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleResetSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selectedUser) return;
+    setActionError(null);
+    setPasswordSetupLink(null);
+
+    if (resetForm.mode === "temporary" && resetForm.temporaryPassword.length < 8) {
+      setActionError("Temporary password must be at least 8 characters.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const result = await resetManagedUserPassword(selectedUser.uid, resetForm);
+      setSuccessMessage(result.message);
+      if (result.passwordSetupLink) {
+        setPasswordSetupLink(result.passwordSetupLink);
+      }
+      closeModal();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to reset password.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDisableConfirm() {
+    if (!selectedUser) return;
+    setSaving(true);
+    setActionError(null);
+    try {
+      await disableManagedUser(selectedUser.uid);
+      await loadUsers(true);
+      closeModal();
+      setSuccessMessage(`${selectedUser.displayName ?? "User"} has been disabled.`);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to disable user.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!selectedUser) return;
+    setSaving(true);
+    setActionError(null);
+    try {
+      await deleteManagedUserPermanently(selectedUser.uid);
+      await loadUsers(true);
+      closeModal();
+      setSuccessMessage(`${selectedUser.displayName ?? "User"} has been permanently deleted.`);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to delete user.");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="space-y-8">
-      <Card className="border-l-4 border-l-brand-red">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-brand-charcoal">
-          Authorization notice
-        </h2>
-        <p className="mt-2 text-sm text-brand-gray">
-          Create the Firebase Auth account in Firebase Console first, then paste the UID here to
-          authorize dashboard access. This form only creates or updates the Firestore{" "}
-          <code className="text-xs">users/&#123;uid&#125;</code> profile — it does not create
-          Firebase Auth accounts.
-        </p>
-      </Card>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm text-brand-gray">
+            Create and manage portal accounts. User IDs are assigned automatically by the
+            authentication system.
+          </p>
+        </div>
+        <Button type="button" onClick={openCreateModal}>
+          Create user
+        </Button>
+      </div>
 
-      <Card>
-        <h2 className="text-lg font-bold text-brand-charcoal">First Admin / New Member Setup</h2>
-        <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-brand-gray">
-          <li>Create the person in Firebase Authentication.</li>
-          <li>Copy their Firebase UID.</li>
-          <li>Add the UID here with role <strong className="text-brand-charcoal">admin</strong> or{" "}
-            <strong className="text-brand-charcoal">member</strong>.</li>
-          <li>Set <strong className="text-brand-charcoal">Active</strong> to true.</li>
-          <li>Have them log in at <code className="text-xs">/login</code>.</li>
-        </ol>
-        <ul className="mt-4 space-y-2 border-t border-brand-gray/15 pt-4 text-sm text-brand-gray">
-          <li>
-            Use <strong className="text-brand-charcoal">admin</strong> only for people who should
-            manage website content and users.
-          </li>
-          <li>
-            Use <strong className="text-brand-charcoal">member</strong> for firefighters who only
-            need dashboard and rounds access.
-          </li>
-          <li>
-            Set <strong className="text-brand-charcoal">active</strong> to false instead of
-            deleting users when access should be disabled.
-          </li>
-        </ul>
-      </Card>
+      {successMessage && <AlertBanner variant="success">{successMessage}</AlertBanner>}
+
+      {passwordSetupLink && (
+        <AlertBanner variant="info" title="Password setup link">
+          <p className="text-sm">
+            Share this link with the user so they can set their password. It expires after use.
+          </p>
+          <input
+            type="text"
+            readOnly
+            value={passwordSetupLink}
+            className="mt-2 w-full rounded-lg border border-brand-gray/20 bg-white px-3 py-2 text-xs text-brand-charcoal"
+            onFocus={(event) => event.target.select()}
+          />
+        </AlertBanner>
+      )}
 
       <ListToolbar
-        title="Authorized personnel"
+        title="Manage users"
         countLabel={
-          loading
-            ? undefined
-            : `${users.length} user profile${users.length === 1 ? "" : "s"}`
+          loading ? undefined : `${filteredUsers.length} of ${users.length} user${users.length === 1 ? "" : "s"}`
         }
         onRefresh={() => void loadUsers(true)}
         refreshing={refreshing}
         refreshDisabled={loading || refreshing}
       />
 
-      {successMessage && <AlertBanner variant="success">{successMessage}</AlertBanner>}
+      <Card className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <FormField id="userSearch" label="Search">
+            <Input
+              id="userSearch"
+              type="search"
+              placeholder="Name, email, title…"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </FormField>
+          <FormField id="roleFilter" label="Filter by role">
+            <Select
+              id="roleFilter"
+              value={roleFilter}
+              onChange={(event) =>
+                setRoleFilter(event.target.value as ManagedUserRole | "all")
+              }
+            >
+              <option value="all">All roles</option>
+              {USER_ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {roleLabel(role)}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField id="statusFilter" label="Filter by status">
+            <Select
+              id="statusFilter"
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as "all" | "active" | "inactive")
+              }
+            >
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </Select>
+          </FormField>
+        </div>
+      </Card>
 
       {loadError && (
         <AlertBanner variant="error" title="Could not load users" onRetry={() => void loadUsers(true)}>
@@ -213,134 +414,20 @@ export function UserAccessManager() {
         </AlertBanner>
       )}
 
-      <Card>
-        <h2 className="text-base font-semibold text-brand-charcoal">
-          {editingUid ? "Edit authorized user" : "Add authorized user"}
-        </h2>
-        <p className="mt-1 text-sm text-brand-gray">
-          {editingUid
-            ? "Update role, contact details, or active status for this UID."
-            : "Paste the Firebase Auth UID after the account exists in Firebase Console."}
-        </p>
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-          <div>
-            <label htmlFor="uid" className="block text-sm font-semibold text-brand-charcoal">
-              Firebase Auth UID <span className="text-brand-red">*</span>
-            </label>
-            <input
-              id="uid"
-              name="uid"
-              type="text"
-              required
-              readOnly={Boolean(editingUid)}
-              value={form.uid}
-              onChange={(event) => setForm((prev) => ({ ...prev, uid: event.target.value }))}
-              className={`${inputBase} disabled:bg-brand-gray-light/50`}
-              placeholder="Paste UID from Firebase Console"
-              autoComplete="off"
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-brand-charcoal">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
-                className={inputBase}
-                placeholder="optional@example.com"
-                autoComplete="off"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="displayName"
-                className="block text-sm font-semibold text-brand-charcoal"
-              >
-                Display name
-              </label>
-              <input
-                id="displayName"
-                name="displayName"
-                type="text"
-                value={form.displayName}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, displayName: event.target.value }))
-                }
-                className={inputBase}
-                placeholder="Optional"
-                autoComplete="name"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="role" className="block text-sm font-semibold text-brand-charcoal">
-                Role <span className="text-brand-red">*</span>
-              </label>
-              <select
-                id="role"
-                name="role"
-                required
-                value={form.role}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    role: event.target.value as ManagedUserFormState["role"],
-                  }))
-                }
-                className={inputBase}
-              >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-            <div className="flex items-end sm:col-span-1">
-              <CheckboxField
-                id="userActive"
-                label="Active (can access dashboard when signed in)"
-                checked={form.active}
-                onChange={(active) => setForm((prev) => ({ ...prev, active }))}
-              />
-            </div>
-          </div>
-
-          {saveError && (
-            <p className="text-sm font-medium text-brand-red" role="alert">
-              {saveError}
-            </p>
-          )}
-
-          <div className="flex flex-wrap gap-3 pt-2">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : editingUid ? "Save changes" : "Add authorized user"}
-            </Button>
-            {(editingUid || form.uid || form.email || form.displayName) && (
-              <Button type="button" variant="ghost" disabled={saving} onClick={resetForm}>
-                Cancel
-              </Button>
-            )}
-          </div>
-        </form>
-      </Card>
-
       {loading && !loadError && <SkeletonTable rows={5} />}
 
-      {!loading && !loadError && users.length === 0 && (
+      {!loading && !loadError && filteredUsers.length === 0 && (
         <EmptyState
-          title="No user profiles yet"
-          description="After creating a Firebase Auth account, add their UID using the form above."
+          title={users.length === 0 ? "No users yet" : "No users match your filters"}
+          description={
+            users.length === 0
+              ? "Create the first portal user with the button above."
+              : "Try adjusting your search or filters."
+          }
         />
       )}
 
-      {!loading && !loadError && users.length > 0 && (
+      {!loading && !loadError && filteredUsers.length > 0 && (
         <>
           <div className="hidden md:block">
             <Card className="overflow-hidden p-0">
@@ -350,40 +437,74 @@ export function UserAccessManager() {
                     <tr>
                       <th className="px-4 py-3 font-semibold text-brand-charcoal">Name</th>
                       <th className="px-4 py-3 font-semibold text-brand-charcoal">Email</th>
-                      <th className="px-4 py-3 font-semibold text-brand-charcoal">UID</th>
                       <th className="px-4 py-3 font-semibold text-brand-charcoal">Role</th>
                       <th className="px-4 py-3 font-semibold text-brand-charcoal">Status</th>
-                      <th className="px-4 py-3 font-semibold text-brand-charcoal">Last updated</th>
+                      <th className="px-4 py-3 font-semibold text-brand-charcoal">Last login</th>
+                      <th className="px-4 py-3 font-semibold text-brand-charcoal">Created</th>
                       <th className="px-4 py-3 font-semibold text-brand-charcoal">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-brand-gray/15">
-                    {users.map((user) => (
+                    {filteredUsers.map((user) => (
                       <tr key={user.uid} className="hover:bg-brand-charcoal/[0.02]">
                         <td className="px-4 py-3 font-medium text-brand-charcoal">
-                          {user.displayName || "—"}
+                          <div>{user.displayName || "—"}</div>
+                          {user.title && (
+                            <div className="text-xs text-brand-gray">{user.title}</div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-brand-gray">{user.email || "—"}</td>
-                        <td className="max-w-[8rem] truncate px-4 py-3 font-mono text-xs text-brand-gray">
-                          {user.uid}
+                        <td className="px-4 py-3">
+                          <StatusBadge
+                            label={roleLabel(user.role)}
+                            variant={roleBadgeVariant(user.role)}
+                          />
                         </td>
                         <td className="px-4 py-3">
-                          <RoleBadge role={user.role} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <UserStatusBadge active={user.active} />
+                          <StatusBadge
+                            label={user.active ? "Active" : "Inactive"}
+                            variant={user.active ? "active" : "inactive"}
+                          />
                         </td>
                         <td className="px-4 py-3 text-brand-gray">
-                          {formatTimestamp(user.updatedAt)}
+                          {formatTimestamp(user.lastLoginAt)}
+                        </td>
+                        <td className="px-4 py-3 text-brand-gray">
+                          {formatTimestamp(user.createdAt)}
                         </td>
                         <td className="px-4 py-3">
-                          <button
-                            type="button"
-                            onClick={() => handleEdit(user)}
-                            className="text-xs font-semibold text-brand-red hover:underline"
-                          >
-                            Edit
-                          </button>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(user)}
+                              className="text-xs font-semibold text-brand-red hover:underline"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openResetModal(user)}
+                              className="text-xs font-semibold text-brand-blue hover:underline"
+                            >
+                              Reset password
+                            </button>
+                            {user.active && (
+                              <button
+                                type="button"
+                                onClick={() => openDisableModal(user)}
+                                className="text-xs font-semibold text-amber-700 hover:underline"
+                              >
+                                Disable
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => openDeleteModal(user)}
+                              className="text-xs font-semibold text-brand-gray hover:underline"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -394,7 +515,7 @@ export function UserAccessManager() {
           </div>
 
           <div className="space-y-4 md:hidden">
-            {users.map((user) => (
+            {filteredUsers.map((user) => (
               <Card key={user.uid}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
@@ -402,29 +523,405 @@ export function UserAccessManager() {
                       {user.displayName || "Unnamed user"}
                     </h3>
                     <p className="mt-1 text-sm text-brand-gray">{user.email || "No email"}</p>
+                    {user.title && <p className="text-xs text-brand-gray">{user.title}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <RoleBadge role={user.role} />
-                    <UserStatusBadge active={user.active} />
+                    <StatusBadge label={roleLabel(user.role)} variant={roleBadgeVariant(user.role)} />
+                    <StatusBadge
+                      label={user.active ? "Active" : "Inactive"}
+                      variant={user.active ? "active" : "inactive"}
+                    />
                   </div>
                 </div>
-                <p className="mt-3 break-all font-mono text-xs text-brand-gray">{user.uid}</p>
                 <p className="mt-2 text-xs text-brand-gray">
-                  Updated {formatTimestamp(user.updatedAt)}
+                  Last login {formatTimestamp(user.lastLoginAt)} · Created{" "}
+                  {formatTimestamp(user.createdAt)}
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-4"
-                  onClick={() => handleEdit(user)}
-                >
-                  Edit
-                </Button>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => openEditModal(user)}>
+                    Edit
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => openResetModal(user)}>
+                    Reset password
+                  </Button>
+                  {user.active && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => openDisableModal(user)}>
+                      Disable
+                    </Button>
+                  )}
+                </div>
               </Card>
             ))}
           </div>
         </>
+      )}
+
+      {modalMode === "create" && (
+        <Modal
+          title="Create user"
+          description="A secure account will be created automatically. No UID is required."
+          onClose={closeModal}
+          footer={
+            <>
+              <Button type="button" variant="ghost" onClick={closeModal} disabled={saving}>
+                Cancel
+              </Button>
+              <Button type="submit" form="create-user-form" disabled={saving}>
+                {saving ? "Creating…" : "Create user"}
+              </Button>
+            </>
+          }
+        >
+          <form id="create-user-form" onSubmit={handleCreateSubmit} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="createFirstName" label="First name" required>
+                <Input
+                  id="createFirstName"
+                  value={createForm.firstName}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({ ...prev, firstName: event.target.value }))
+                  }
+                  required
+                />
+              </FormField>
+              <FormField id="createLastName" label="Last name" required>
+                <Input
+                  id="createLastName"
+                  value={createForm.lastName}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({ ...prev, lastName: event.target.value }))
+                  }
+                  required
+                />
+              </FormField>
+            </div>
+            <FormField id="createEmail" label="Email" required>
+              <Input
+                id="createEmail"
+                type="email"
+                value={createForm.email}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({ ...prev, email: event.target.value }))
+                }
+                required
+              />
+            </FormField>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="createRole" label="Role" required>
+                <Select
+                  id="createRole"
+                  value={createForm.role}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      role: event.target.value as ManagedUserRole,
+                    }))
+                  }
+                >
+                  {USER_ROLES.map((role) => (
+                    <option key={role} value={role}>
+                      {roleLabel(role)}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField id="createStatus" label="Status" required>
+                <Select
+                  id="createStatus"
+                  value={createForm.active ? "active" : "inactive"}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      active: event.target.value === "active",
+                    }))
+                  }
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </Select>
+              </FormField>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="createPhone" label="Phone">
+                <Input
+                  id="createPhone"
+                  type="tel"
+                  value={createForm.phone}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({ ...prev, phone: event.target.value }))
+                  }
+                />
+              </FormField>
+              <FormField id="createTitle" label="Title / department">
+                <Input
+                  id="createTitle"
+                  value={createForm.title}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({ ...prev, title: event.target.value }))
+                  }
+                />
+              </FormField>
+            </div>
+            <FormField
+              id="createPasswordMode"
+              label="Password setup"
+              hint="Password setup links are more secure. Share the generated link with the user."
+            >
+              <Select
+                id="createPasswordMode"
+                value={createForm.passwordMode}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    passwordMode: event.target.value as CreateUserFormState["passwordMode"],
+                  }))
+                }
+              >
+                <option value="reset_link">Generate password setup link</option>
+                <option value="temporary">Set temporary password</option>
+              </Select>
+            </FormField>
+            {createForm.passwordMode === "temporary" && (
+              <FormField id="createTempPassword" label="Temporary password" required>
+                <Input
+                  id="createTempPassword"
+                  type="password"
+                  value={createForm.temporaryPassword}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      temporaryPassword: event.target.value,
+                    }))
+                  }
+                  minLength={8}
+                  required
+                />
+              </FormField>
+            )}
+            {actionError && (
+              <p className="text-sm font-medium text-brand-red" role="alert">
+                {actionError}
+              </p>
+            )}
+          </form>
+        </Modal>
+      )}
+
+      {modalMode === "edit" && selectedUser && (
+        <Modal
+          title="Edit user"
+          description={selectedUser.email ?? undefined}
+          onClose={closeModal}
+          footer={
+            <>
+              <Button type="button" variant="ghost" onClick={closeModal} disabled={saving}>
+                Cancel
+              </Button>
+              <Button type="submit" form="edit-user-form" disabled={saving}>
+                {saving ? "Saving…" : "Save changes"}
+              </Button>
+            </>
+          }
+        >
+          <form id="edit-user-form" onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="editFirstName" label="First name" required>
+                <Input
+                  id="editFirstName"
+                  value={editForm.firstName}
+                  onChange={(event) =>
+                    setEditForm((prev) => ({ ...prev, firstName: event.target.value }))
+                  }
+                  required
+                />
+              </FormField>
+              <FormField id="editLastName" label="Last name" required>
+                <Input
+                  id="editLastName"
+                  value={editForm.lastName}
+                  onChange={(event) =>
+                    setEditForm((prev) => ({ ...prev, lastName: event.target.value }))
+                  }
+                  required
+                />
+              </FormField>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="editRole" label="Role" required>
+                <Select
+                  id="editRole"
+                  value={editForm.role}
+                  onChange={(event) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      role: event.target.value as ManagedUserRole,
+                    }))
+                  }
+                >
+                  {USER_ROLES.map((role) => (
+                    <option key={role} value={role}>
+                      {roleLabel(role)}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField id="editStatus" label="Status" required>
+                <Select
+                  id="editStatus"
+                  value={editForm.active ? "active" : "inactive"}
+                  onChange={(event) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      active: event.target.value === "active",
+                    }))
+                  }
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </Select>
+              </FormField>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="editPhone" label="Phone">
+                <Input
+                  id="editPhone"
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={(event) =>
+                    setEditForm((prev) => ({ ...prev, phone: event.target.value }))
+                  }
+                />
+              </FormField>
+              <FormField id="editTitle" label="Title / department">
+                <Input
+                  id="editTitle"
+                  value={editForm.title}
+                  onChange={(event) =>
+                    setEditForm((prev) => ({ ...prev, title: event.target.value }))
+                  }
+                />
+              </FormField>
+            </div>
+            {actionError && (
+              <p className="text-sm font-medium text-brand-red" role="alert">
+                {actionError}
+              </p>
+            )}
+          </form>
+        </Modal>
+      )}
+
+      {modalMode === "reset" && selectedUser && (
+        <Modal
+          title="Reset password"
+          description={selectedUser.email ?? undefined}
+          onClose={closeModal}
+          footer={
+            <>
+              <Button type="button" variant="ghost" onClick={closeModal} disabled={saving}>
+                Cancel
+              </Button>
+              <Button type="submit" form="reset-password-form" disabled={saving}>
+                {saving ? "Working…" : "Reset password"}
+              </Button>
+            </>
+          }
+        >
+          <form id="reset-password-form" onSubmit={handleResetSubmit} className="space-y-4">
+            <FormField id="resetMode" label="Reset method">
+              <Select
+                id="resetMode"
+                value={resetForm.mode}
+                onChange={(event) =>
+                  setResetForm((prev) => ({
+                    ...prev,
+                    mode: event.target.value as ResetPasswordFormState["mode"],
+                  }))
+                }
+              >
+                <option value="reset_link">Generate password setup link</option>
+                <option value="temporary">Set temporary password</option>
+              </Select>
+            </FormField>
+            {resetForm.mode === "temporary" && (
+              <FormField id="resetTempPassword" label="Temporary password" required>
+                <Input
+                  id="resetTempPassword"
+                  type="password"
+                  value={resetForm.temporaryPassword}
+                  onChange={(event) =>
+                    setResetForm((prev) => ({
+                      ...prev,
+                      temporaryPassword: event.target.value,
+                    }))
+                  }
+                  minLength={8}
+                  required
+                />
+              </FormField>
+            )}
+            {actionError && (
+              <p className="text-sm font-medium text-brand-red" role="alert">
+                {actionError}
+              </p>
+            )}
+          </form>
+        </Modal>
+      )}
+
+      {modalMode === "disable" && selectedUser && (
+        <Modal
+          title="Disable user"
+          description={`Disable ${selectedUser.displayName ?? selectedUser.email ?? "this user"}? They will not be able to sign in, but their records will be kept.`}
+          onClose={closeModal}
+          footer={
+            <>
+              <Button type="button" variant="ghost" onClick={closeModal} disabled={saving}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={() => void handleDisableConfirm()} disabled={saving}>
+                {saving ? "Disabling…" : "Disable user"}
+              </Button>
+            </>
+          }
+        >
+          {actionError && (
+            <p className="text-sm font-medium text-brand-red" role="alert">
+              {actionError}
+            </p>
+          )}
+        </Modal>
+      )}
+
+      {modalMode === "delete" && selectedUser && (
+        <Modal
+          title="Permanently delete user"
+          description="This removes the authentication account and profile. Prefer disabling users when possible."
+          onClose={closeModal}
+          footer={
+            <>
+              <Button type="button" variant="ghost" onClick={closeModal} disabled={saving}>
+                Cancel
+              </Button>
+              <Button type="button" variant="outline" onClick={() => void handleDeleteConfirm()} disabled={saving}>
+                {saving ? "Deleting…" : "Delete permanently"}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-brand-gray">
+            You are about to permanently delete{" "}
+            <strong className="text-brand-charcoal">
+              {selectedUser.displayName ?? selectedUser.email}
+            </strong>
+            . This cannot be undone.
+          </p>
+          {actionError && (
+            <p className="mt-3 text-sm font-medium text-brand-red" role="alert">
+              {actionError}
+            </p>
+          )}
+        </Modal>
       )}
     </div>
   );

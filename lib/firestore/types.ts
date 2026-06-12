@@ -135,6 +135,7 @@ export type StoredFileModule =
   | "fleet"
   | "rounds"
   | "leadership"
+  | "gallery"
   | "documents";
 
 export type StoredFileMetadata = {

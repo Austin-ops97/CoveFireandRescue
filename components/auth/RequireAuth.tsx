@@ -44,7 +44,7 @@ function AuthGate({
 
 export function RequireAuth({
   children,
-  allowedRoles = ["admin", "member"],
+  allowedRoles = ["admin", "editor", "viewer", "member"],
 }: RequireAuthProps) {
   const router = useRouter();
   const { configured, loading, user, profile, role } = useAuth();

@@ -17,7 +17,7 @@ function badRequest(message: string): Response {
 
 export async function POST(request: Request) {
   try {
-    const actor = await requireServerRole(request, ["admin", "member"]);
+    const actor = await requireServerRole(request, ["admin", "editor", "member"]);
 
     let body: unknown;
     try {

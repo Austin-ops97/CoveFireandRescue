@@ -4,11 +4,17 @@ import type { StorageVisibility } from "@/lib/file-storage/types";
 export type FileStoragePermission = "read" | "write" | "delete";
 
 export function canReadFileStorage(user: VerifiedServerUser): boolean {
-  return user.active && (user.role === "admin" || user.role === "member");
+  return (
+    user.active &&
+    (user.role === "admin" ||
+      user.role === "editor" ||
+      user.role === "viewer" ||
+      user.role === "member")
+  );
 }
 
 export function canWriteFileStorage(user: VerifiedServerUser): boolean {
-  return user.active && user.role === "admin";
+  return user.active && (user.role === "admin" || user.role === "editor");
 }
 
 export function canDeleteFileStorage(user: VerifiedServerUser): boolean {

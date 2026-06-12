@@ -7,13 +7,13 @@ import {
   validateGalleryPayload,
 } from "@/lib/gallery/server";
 import type { GalleryFormState } from "@/lib/gallery/types";
-import { requireServerRole, serverAuthErrorResponse } from "@/lib/auth/server";
+import { requireManageContent, serverAuthErrorResponse } from "@/lib/auth/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firestore/collections";
 
 export async function GET(request: Request) {
   try {
-    await requireServerRole(request, ["admin"]);
+    await requireManageContent(request);
 
     const snapshot = await adminDb.collection(COLLECTIONS.gallery).limit(200).get();
 
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireServerRole(request, ["admin"]);
+    await requireManageContent(request);
 
     let body: GalleryFormState;
     try {

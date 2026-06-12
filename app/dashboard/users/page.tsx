@@ -4,16 +4,16 @@ import { UserAccessManager } from "@/components/dashboard/UserAccessManager";
 import { PageShell } from "@/components/site/PageShell";
 
 export const metadata: Metadata = {
-  title: "User Access",
-  description: "Manage authorized Cove Fire & Rescue personnel and access levels.",
+  title: "Manage Users",
+  description: "Create and manage Cove Fire & Rescue portal accounts and access levels.",
 };
 
 export default function UserAccessPage() {
   return (
     <RequireAuth allowedRoles={["admin"]}>
       <PageShell
-        title="User Access"
-        description="Manage authorized Cove Fire & Rescue personnel and their access level."
+        title="Manage Users"
+        description="Create portal accounts, assign roles, and control member access."
       >
         <UserAccessManager />
       </PageShell>
