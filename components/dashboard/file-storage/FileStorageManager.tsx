@@ -213,7 +213,8 @@ export function FileStorageManager() {
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MoveTarget | null>(null);
-  const [deleteRecursive, setDeleteRecursive] = useState(false);
+  const [deleteRecursive, setDeleteRecursive] = useState(true);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -326,15 +327,16 @@ export function FileStorageManager() {
   async function handleCreateFolder() {
     if (!newFolderName.trim()) return;
     setProcessing(true);
-    setError(null);
+    setModalError(null);
     try {
       await createStorageFolder({ name: newFolderName, parentId: currentFolderId });
       setMessage(`Created folder "${newFolderName.trim()}".`);
       setNewFolderOpen(false);
       setNewFolderName("");
+      setModalError(null);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create folder.");
+      setModalError(err instanceof Error ? err.message : "Failed to create folder.");
     } finally {
       setProcessing(false);
     }
@@ -397,7 +399,7 @@ export function FileStorageManager() {
   async function handleDelete() {
     if (!deleteTarget) return;
     setProcessing(true);
-    setError(null);
+    setModalError(null);
     try {
       if (deleteTarget.type === "folder") {
         await deleteStorageFolder({
@@ -410,10 +412,11 @@ export function FileStorageManager() {
       setMessage("Deleted successfully.");
       setDeleteOpen(false);
       setDeleteTarget(null);
-      setDeleteRecursive(false);
+      setDeleteRecursive(true);
+      setModalError(null);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed.");
+      setModalError(err instanceof Error ? err.message : "Delete failed.");
     } finally {
       setProcessing(false);
     }
@@ -437,8 +440,22 @@ export function FileStorageManager() {
 
   function openDelete(target: MoveTarget) {
     setDeleteTarget(target);
-    setDeleteRecursive(false);
+    setDeleteRecursive(target.type === "folder");
+    setModalError(null);
     setDeleteOpen(true);
+  }
+
+  function closeDeleteModal() {
+    setDeleteOpen(false);
+    setDeleteTarget(null);
+    setDeleteRecursive(true);
+    setModalError(null);
+  }
+
+  function closeNewFolderModal() {
+    setNewFolderOpen(false);
+    setNewFolderName("");
+    setModalError(null);
   }
 
   const breadcrumbs = browse?.breadcrumbs ?? [{ id: null, name: "File Storage", fullPath: "" }];
@@ -820,10 +837,10 @@ export function FileStorageManager() {
         <Modal
           title="New folder"
           description={`Create a folder inside ${browse?.folder?.name ?? "File Storage"}.`}
-          onClose={() => setNewFolderOpen(false)}
+          onClose={closeNewFolderModal}
           footer={
             <>
-              <Button type="button" variant="outline" onClick={() => setNewFolderOpen(false)}>
+              <Button type="button" variant="outline" onClick={closeNewFolderModal}>
                 Cancel
               </Button>
               <Button type="button" disabled={processing} onClick={() => void handleCreateFolder()}>
@@ -832,6 +849,11 @@ export function FileStorageManager() {
             </>
           }
         >
+          {modalError && (
+            <AlertBanner variant="error" title="Could not create folder" className="mb-4">
+              {modalError}
+            </AlertBanner>
+          )}
           <FormField id="new-folder-name" label="Folder name" required>
             <Input
               id="new-folder-name"
@@ -902,10 +924,10 @@ export function FileStorageManager() {
         <Modal
           title={`Delete ${deleteTarget.type}?`}
           description="This action cannot be undone."
-          onClose={() => setDeleteOpen(false)}
+          onClose={closeDeleteModal}
           footer={
             <>
-              <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+              <Button type="button" variant="outline" onClick={closeDeleteModal}>
                 Cancel
               </Button>
               <Button
@@ -919,6 +941,11 @@ export function FileStorageManager() {
             </>
           }
         >
+          {modalError && (
+            <AlertBanner variant="error" title="Could not delete" className="mb-4">
+              {modalError}
+            </AlertBanner>
+          )}
           <p className="text-sm text-brand-charcoal">
             Are you sure you want to delete{" "}
             <strong>
@@ -936,7 +963,10 @@ export function FileStorageManager() {
                 onChange={(e) => setDeleteRecursive(e.target.checked)}
                 className="mt-1"
               />
-              Delete all files and subfolders inside this folder (recursive delete)
+              <span>
+                Also delete all files and subfolders inside this folder. Leave this checked if the
+                folder is not empty.
+              </span>
             </label>
           )}
         </Modal>

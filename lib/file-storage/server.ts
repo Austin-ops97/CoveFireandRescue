@@ -775,7 +775,20 @@ export async function deleteStorageFile(params: {
   }
 
   if (file.b2FileId && file.b2Key) {
-    await deleteB2File({ fileName: file.b2Key, fileId: file.b2FileId });
+    try {
+      await deleteB2File({ fileName: file.b2Key, fileId: file.b2FileId });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message.toLowerCase() : "";
+      const alreadyGone =
+        detail.includes("404") ||
+        detail.includes("not found") ||
+        detail.includes("file_not_present") ||
+        detail.includes("no_such");
+      if (!alreadyGone) {
+        throw error;
+      }
+      console.warn("B2 object already absent; removing metadata for file:", file.id);
+    }
   }
 
   await adminDb.collection(COLLECTIONS.storageFiles).doc(file.id).delete();

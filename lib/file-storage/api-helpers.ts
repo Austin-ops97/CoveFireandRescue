@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/audit/server";
 import type { AuditAction } from "@/lib/audit/types";
 import type { VerifiedServerUser } from "@/lib/auth/server";
-import { requireServerRole, serverAuthErrorResponse } from "@/lib/auth/server";
+import { ServerAuthError, requireServerRole, serverAuthErrorResponse } from "@/lib/auth/server";
 import {
   assertFileStoragePermission,
   canReadFileStorage,
@@ -21,6 +21,13 @@ export function notFound(message: string): Response {
 export function handleFileStorageError(error: unknown): Response {
   if (error instanceof FileStorageValidationError) {
     return badRequest(error.message);
+  }
+  if (error instanceof ServerAuthError) {
+    return serverAuthErrorResponse(error);
+  }
+  if (error instanceof Error && error.message.trim()) {
+    console.error("File storage operation failed:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return serverAuthErrorResponse(error);
 }
