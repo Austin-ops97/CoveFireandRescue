@@ -9,7 +9,7 @@ import {
   StorageValidationError,
   validateCreateUploadRequest,
 } from "@/lib/storage/server";
-import { buildB2FileKey, getB2UploadUrl, getPublicB2Url } from "@/lib/storage/b2";
+import { buildB2FileKey, getB2UploadUrl, getPublicB2Url, isB2Configured } from "@/lib/storage/b2";
 
 function badRequest(message: string): Response {
   return NextResponse.json({ error: message }, { status: 400 });
@@ -35,6 +35,16 @@ export async function POST(request: Request) {
         return badRequest(error.message);
       }
       throw error;
+    }
+
+    if (!isB2Configured()) {
+      return NextResponse.json(
+        {
+          error:
+            "Backblaze B2 is not configured. Add B2_* environment variables in Vercel and redeploy.",
+        },
+        { status: 503 }
+      );
     }
 
     const b2Key = buildB2FileKey({

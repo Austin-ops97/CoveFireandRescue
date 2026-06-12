@@ -38,6 +38,27 @@ export function FileLibraryManager() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [b2Configured, setB2Configured] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkB2() {
+      try {
+        const response = await fetch("/api/health", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = (await response.json()) as { b2Configured?: boolean };
+        if (!cancelled) setB2Configured(data.b2Configured === true);
+      } catch {
+        if (!cancelled) setB2Configured(null);
+      }
+    }
+
+    void checkB2();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -94,11 +115,20 @@ export function FileLibraryManager() {
 
   return (
     <div className="space-y-6">
-      <InfoBanner>
-        <strong className="text-brand-charcoal">Department file storage.</strong> Files are stored
-        in Backblaze B2. Upload SOPs, forms, training documents, and other department files for
-        member access.
-      </InfoBanner>
+      {b2Configured === false ? (
+        <AlertBanner variant="warning" title="Backblaze B2 not connected">
+          File uploads are not configured yet. Add the six <code className="text-xs">B2_*</code>{" "}
+          environment variables in Vercel (see docs/BACKBLAZE_B2_SETUP.md), redeploy, then confirm{" "}
+          <code className="text-xs">/api/health</code> returns{" "}
+          <code className="text-xs">b2Configured: true</code>.
+        </AlertBanner>
+      ) : (
+        <InfoBanner>
+          <strong className="text-brand-charcoal">Department file storage.</strong> Files are stored
+          in Backblaze B2. Upload SOPs, forms, training documents, and other department files for
+          member access.
+        </InfoBanner>
+      )}
 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -119,7 +149,7 @@ export function FileLibraryManager() {
             <Button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
+              disabled={uploading || b2Configured === false}
             >
               {uploading ? "Uploading…" : "Choose file"}
             </Button>
