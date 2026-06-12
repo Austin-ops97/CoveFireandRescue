@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { FormField, Input } from "@/components/ui/FormField";
 import { FirebaseConfigDebug } from "@/components/auth/FirebaseConfigDebug";
+import { canAccessDashboard } from "@/lib/auth/roles";
 import { getFriendlyAuthErrorMessage } from "@/lib/firebase/errors";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -18,13 +19,18 @@ interface LoginFormProps {
 export function LoginForm({ embedded = false }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { configured, loading, signInWithEmailPassword } = useAuth();
+  const { configured, loading, user, role, signInWithEmailPassword } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const nextPath = searchParams.get("next") || "/dashboard";
+
+  useEffect(() => {
+    if (loading || !user || !canAccessDashboard(role)) return;
+    router.replace(nextPath);
+  }, [loading, user, role, router, nextPath]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
 import { AlertBanner, EmptyState, SkeletonCardList } from "@/components/ui";
-import { fetchAdminApplications } from "@/lib/applications/admin-client";
+import { deleteApplication, fetchAdminApplications } from "@/lib/applications/admin-client";
 import type { ApplicationRecord } from "@/lib/applications/types";
 
 function formatDate(value: unknown): string {
@@ -13,14 +14,33 @@ function formatDate(value: unknown): string {
   return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
-function ApplicationDetail({ record }: { record: ApplicationRecord }) {
+function ApplicationDetail({
+  record,
+  deleting,
+  onDelete,
+}: {
+  record: ApplicationRecord;
+  deleting: boolean;
+  onDelete: (id: string) => void;
+}) {
   return (
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h3 className="text-lg font-bold text-brand-charcoal">{record.fullName}</h3>
-        <span className="rounded-full bg-brand-blue/10 px-2.5 py-0.5 text-xs font-semibold uppercase text-brand-blue">
-          {record.status}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-brand-blue/10 px-2.5 py-0.5 text-xs font-semibold uppercase text-brand-blue">
+            {record.status}
+          </span>
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            disabled={deleting}
+            onClick={() => onDelete(record.id)}
+          >
+            {deleting ? "Deleting…" : "Delete"}
+          </Button>
+        </div>
       </div>
       <p className="mt-1 text-sm text-brand-gray">Submitted {formatDate(record.submittedAt)}</p>
       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
@@ -61,6 +81,8 @@ export function ApplicationsManager() {
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,9 +100,32 @@ export function ApplicationsManager() {
     void load();
   }, [load]);
 
+  async function handleDelete(id: string) {
+    const record = applications.find((item) => item.id === id);
+    const name = record?.fullName ?? "this application";
+
+    if (!window.confirm(`Delete the application from ${name}? This cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingId(id);
+    setError(null);
+    setMessage(null);
+
+    try {
+      await deleteApplication(id);
+      setApplications((current) => current.filter((item) => item.id !== id));
+      setMessage("Application deleted.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete application.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   if (loading) return <SkeletonCardList count={3} />;
 
-  if (error) {
+  if (error && applications.length === 0) {
     return (
       <AlertBanner variant="error" title="Could not load applications">
         {error}
@@ -99,8 +144,23 @@ export function ApplicationsManager() {
 
   return (
     <div className="space-y-4">
+      {message && (
+        <AlertBanner variant="success" title="Deleted">
+          {message}
+        </AlertBanner>
+      )}
+      {error && (
+        <AlertBanner variant="error" title="Error">
+          {error}
+        </AlertBanner>
+      )}
       {applications.map((record) => (
-        <ApplicationDetail key={record.id} record={record} />
+        <ApplicationDetail
+          key={record.id}
+          record={record}
+          deleting={deletingId === record.id}
+          onDelete={(applicationId) => void handleDelete(applicationId)}
+        />
       ))}
     </div>
   );

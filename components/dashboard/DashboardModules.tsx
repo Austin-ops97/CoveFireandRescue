@@ -6,141 +6,10 @@ import { DashboardSection } from "@/components/dashboard/home/DashboardStatCard"
 import { Card } from "@/components/site/Card";
 import { useAuth } from "@/hooks/useAuth";
 import { canManageContent } from "@/lib/auth/roles";
-
-type ModuleStatus = "active" | "coming_soon" | "admin_only";
-
-type DashboardModule = {
-  title: string;
-  description: string;
-  href?: string;
-  status: ModuleStatus;
-};
-
-type ModuleGroup = {
-  id: string;
-  title: string;
-  description?: string;
-  modules: DashboardModule[];
-  adminOnly?: boolean;
-};
-
-const moduleGroups: ModuleGroup[] = [
-  {
-    id: "operations",
-    title: "Operations",
-    description: "Digital rounds, inspections, and review workflows.",
-    modules: [
-      {
-        title: "Digital Rounds / Checklists",
-        description: "Complete apparatus, station, equipment, and custom inspection checklists.",
-        href: "/dashboard/rounds",
-        status: "active",
-      },
-      {
-        title: "Checklist History",
-        description: "View submitted inspections and attached photos.",
-        href: "/dashboard/rounds/history",
-        status: "active",
-      },
-      {
-        title: "Checklist Review",
-        description: "Review submissions and highlight failed or negative answers.",
-        href: "/dashboard/rounds/review",
-        status: "admin_only",
-      },
-      {
-        title: "Checklist Templates",
-        description: "Build reusable inspection sheets with sections and custom fields.",
-        href: "/dashboard/checklist-templates",
-        status: "admin_only",
-      },
-    ],
-  },
-  {
-    id: "content",
-    title: "Content Management",
-    description: "Public-facing department content and apparatus records.",
-    adminOnly: true,
-    modules: [
-      {
-        title: "Announcements Manager",
-        description: "Publish and manage public announcements.",
-        href: "/dashboard/announcements",
-        status: "admin_only",
-      },
-      {
-        title: "Fleet Manager",
-        description: "Manage apparatus details, photos, and equipment.",
-        href: "/dashboard/fleet",
-        status: "admin_only",
-      },
-      {
-        title: "Leadership Manager",
-        description: "Update command staff profiles and photos.",
-        href: "/dashboard/leadership",
-        status: "admin_only",
-      },
-      {
-        title: "Gallery Manager",
-        description: "Manage public photo gallery images.",
-        href: "/dashboard/gallery",
-        status: "admin_only",
-      },
-      {
-        title: "Volunteer Applications",
-        description: "Review applications from the public Join Us page.",
-        href: "/dashboard/applications",
-        status: "admin_only",
-      },
-      {
-        title: "Contact Submissions",
-        description: "Review messages from the public contact form.",
-        href: "/dashboard/contact-submissions",
-        status: "admin_only",
-      },
-    ],
-  },
-  {
-    id: "users",
-    title: "User / Admin",
-    description: "Member access and role management.",
-    adminOnly: true,
-    modules: [
-      {
-        title: "Manage Users",
-        description: "Create accounts, assign roles, and control member access.",
-        href: "/dashboard/users",
-        status: "admin_only",
-      },
-    ],
-  },
-  {
-    id: "system",
-    title: "System",
-    description: "Department files, training records, and equipment inventory.",
-    adminOnly: true,
-    modules: [
-      {
-        title: "File Storage",
-        description: "Folder-based file manager with Backblaze B2 storage.",
-        href: "/dashboard/file-library",
-        status: "admin_only",
-      },
-      {
-        title: "Training Records",
-        description: "Member training hours and certifications.",
-        href: "/dashboard/training-records",
-        status: "admin_only",
-      },
-      {
-        title: "Equipment Tracking",
-        description: "Inventory and maintenance for tools and gear.",
-        href: "/dashboard/equipment-tracking",
-        status: "admin_only",
-      },
-    ],
-  },
-];
+import {
+  dashboardModuleGroups,
+  type DashboardModule,
+} from "@/lib/config/dashboard-modules";
 
 function ModuleCard({ module }: { module: DashboardModule }) {
   const card = (
@@ -197,7 +66,7 @@ export function DashboardModules() {
   const { role } = useAuth();
   const isAdmin = canManageContent(role);
 
-  const visibleGroups = moduleGroups
+  const visibleGroups = dashboardModuleGroups
     .filter((group) => !group.adminOnly || isAdmin)
     .map((group) => ({
       ...group,

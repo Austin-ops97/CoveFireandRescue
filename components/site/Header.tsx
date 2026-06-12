@@ -3,12 +3,27 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { canAccessDashboard } from "@/lib/auth/roles";
 import { mainNavLinks } from "@/lib/config/navigation";
 
 export function Header() {
   const pathname = usePathname();
+  const { user, role, loading } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navLinks = useMemo(() => {
+    if (loading || !user || !canAccessDashboard(role)) {
+      return mainNavLinks;
+    }
+
+    return mainNavLinks.map((link) =>
+      link.href === "/login"
+        ? { href: "/dashboard", label: "Dashboard", cta: true }
+        : link
+    );
+  }, [loading, user, role]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -68,7 +83,7 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Main navigation">
-          {mainNavLinks.map((link) => (
+          {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -113,7 +128,7 @@ export function Header() {
             aria-label="Mobile navigation"
           >
             <ul className="flex flex-col gap-1 p-3">
-              {mainNavLinks.map((link) => (
+              {navLinks.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}

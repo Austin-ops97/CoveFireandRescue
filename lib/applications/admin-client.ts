@@ -23,3 +23,13 @@ export async function fetchAdminApplications(): Promise<ApplicationRecord[]> {
   const data = (await response.json()) as { applications?: ApplicationRecord[] };
   return Array.isArray(data.applications) ? data.applications : [];
 }
+
+export async function deleteApplication(id: string): Promise<void> {
+  const response = await authenticatedFetch(
+    `/api/admin/applications/${encodeURIComponent(id)}`,
+    { method: "DELETE" }
+  );
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+}
