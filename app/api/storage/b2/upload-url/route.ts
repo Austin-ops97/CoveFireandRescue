@@ -84,6 +84,14 @@ export async function POST(request: Request) {
     }
 
     console.error("B2 upload URL request failed:", error);
-    return NextResponse.json({ error: "Unable to prepare upload right now." }, { status: 500 });
+
+    const message =
+      error instanceof Error &&
+      (error.message.startsWith("Backblaze B2") ||
+        error.message.startsWith("Missing required Backblaze"))
+        ? error.message
+        : "Unable to prepare upload right now.";
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -87,14 +87,20 @@ export async function authorizeB2(): Promise<{
     cache: "no-store",
   });
 
+  const responseText = await response.text().catch(() => "");
+
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
     throw new Error(
-      `Backblaze B2 authorization failed (${response.status})${detail ? `: ${detail}` : ""}`
+      `Backblaze B2 authorization failed (${response.status})${responseText ? `: ${responseText.slice(0, 240)}` : ""}`
     );
   }
 
-  const data = (await response.json()) as B2AuthorizeResponse;
+  let data: B2AuthorizeResponse;
+  try {
+    data = JSON.parse(responseText) as B2AuthorizeResponse;
+  } catch {
+    throw new Error("Backblaze B2 authorization returned an invalid response.");
+  }
 
   if (!data.apiUrl || !data.authorizationToken) {
     throw new Error("Backblaze B2 authorization returned an invalid response.");
@@ -124,14 +130,20 @@ export async function getB2UploadUrl(): Promise<{
     cache: "no-store",
   });
 
+  const responseText = await response.text().catch(() => "");
+
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
     throw new Error(
-      `Backblaze B2 upload URL request failed (${response.status})${detail ? `: ${detail}` : ""}`
+      `Backblaze B2 upload URL request failed (${response.status})${responseText ? `: ${responseText.slice(0, 240)}` : ""}`
     );
   }
 
-  const data = (await response.json()) as B2UploadUrlResponse;
+  let data: B2UploadUrlResponse;
+  try {
+    data = JSON.parse(responseText) as B2UploadUrlResponse;
+  } catch {
+    throw new Error("Backblaze B2 upload URL response was invalid.");
+  }
 
   if (!data.uploadUrl || !data.authorizationToken) {
     throw new Error("Backblaze B2 upload URL response was invalid.");
