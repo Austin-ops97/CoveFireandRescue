@@ -122,13 +122,13 @@ export function FileLibraryManager() {
           <code className="text-xs">/api/health</code> returns{" "}
           <code className="text-xs">b2Configured: true</code>.
         </AlertBanner>
-      ) : (
+      ) : b2Configured === true ? (
         <InfoBanner>
           <strong className="text-brand-charcoal">Department file storage.</strong> Files are stored
-          in Backblaze B2. Upload SOPs, forms, training documents, and other department files for
-          member access.
+          in Backblaze B2. If uploads fail with &quot;Load failed&quot;, add CORS rules to your B2
+          bucket (see <code className="text-xs">docs/BACKBLAZE_B2_SETUP.md</code>).
         </InfoBanner>
-      )}
+      ) : null}
 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">

@@ -127,19 +127,29 @@ async function uploadFileToB2(params: {
 
   const uploadTarget = (await uploadUrlResponse.json()) as CreateB2UploadResponse;
 
-  const b2Response = await fetch(uploadTarget.uploadUrl, {
-    method: "POST",
-    headers: {
-      Authorization: uploadTarget.authorizationToken,
-      "X-Bz-File-Name": encodeURIComponent(uploadTarget.b2Key),
-      "Content-Type": params.file.type,
-      "X-Bz-Content-Sha1": "do_not_verify",
-    },
-    body: params.file,
-  });
+  let b2Response: Response;
+  try {
+    b2Response = await fetch(uploadTarget.uploadUrl, {
+      method: "POST",
+      headers: {
+        Authorization: uploadTarget.authorizationToken,
+        "X-Bz-File-Name": encodeURIComponent(uploadTarget.b2Key),
+        "Content-Type": params.file.type || "application/octet-stream",
+        "X-Bz-Content-Sha1": "do_not_verify",
+      },
+      body: params.file,
+    });
+  } catch {
+    throw new Error(
+      "Browser upload to Backblaze was blocked. Add CORS rules to your B2 bucket (see docs/BACKBLAZE_B2_SETUP.md)."
+    );
+  }
 
   if (!b2Response.ok) {
-    throw new Error(`Backblaze upload failed (${b2Response.status}).`);
+    const detail = await b2Response.text().catch(() => "");
+    throw new Error(
+      `Backblaze upload failed (${b2Response.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`
+    );
   }
 
   const b2Result = (await b2Response.json()) as B2UploadResult;

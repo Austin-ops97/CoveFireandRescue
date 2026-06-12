@@ -24,6 +24,23 @@ These values are read only on the server (`lib/storage/b2.ts` uses `import "serv
 - Make the bucket public **only if** you intend public image URLs (fleet and leadership photos on the public site).
 - Use lifecycle rules later if you need automatic deletion or tiering for old files.
 
+## CORS rules (required for browser uploads)
+
+Uploads go **directly from the browser to Backblaze**. Without CORS rules on the bucket, uploads fail with a generic browser error such as **"Load failed"** (Safari) or a CORS policy error (Chrome).
+
+1. Install the [Backblaze B2 CLI](https://www.backblaze.com/docs/cloud-storage-command-line-tools) and authorize it (`b2 account authorize`).
+2. Apply the rules in [`docs/b2-cors-rules.json`](./b2-cors-rules.json):
+
+```bash
+b2 update-bucket --cors-rules "$(cat docs/b2-cors-rules.json)" covefireandrescue allPublic
+```
+
+Replace `covefireandrescue` with your bucket name if different. Use `allPublic` or `allPrivate` to match your bucket type.
+
+3. In the Backblaze web console, open the bucket → **CORS Rules** and confirm **custom rules** are active.
+
+Add any extra preview domains (for example `https://*.vercel.app`) if you test uploads on Vercel preview URLs.
+
 ## How uploads work
 
 1. An **admin** requests an upload URL from `POST /api/storage/b2/upload-url` (Firebase Admin verifies the session).
