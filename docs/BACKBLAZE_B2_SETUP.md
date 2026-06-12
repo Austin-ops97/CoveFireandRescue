@@ -24,9 +24,13 @@ These values are read only on the server (`lib/storage/b2.ts` uses `import "serv
 - Make the bucket public **only if** you intend public image URLs (fleet and leadership photos on the public site).
 - Use lifecycle rules later if you need automatic deletion or tiering for old files.
 
-## CORS rules (required for browser uploads)
+## Upload path
 
-Uploads go **directly from the browser to Backblaze**. Without CORS rules on the bucket, uploads fail with a generic browser error such as **"Load failed"** (Safari) or a CORS policy error (Chrome).
+By default, files upload **through the Vercel API** (`POST /api/storage/b2/upload`) and then to Backblaze server-side. This avoids browser CORS configuration. **Max file size: 4.5 MB** (Vercel serverless body limit).
+
+## CORS rules (optional — direct browser uploads only)
+
+If you later enable direct browser-to-B2 uploads, CORS rules are required on the bucket. Without them, uploads fail with **"Load failed"** or a CORS policy error.
 
 1. Install the [Backblaze B2 CLI](https://www.backblaze.com/docs/cloud-storage-command-line-tools) and authorize it (`b2 account authorize`).
 2. Apply the rules in [`docs/b2-cors-rules.json`](./b2-cors-rules.json):

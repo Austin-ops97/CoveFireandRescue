@@ -125,8 +125,7 @@ export function FileLibraryManager() {
       ) : b2Configured === true ? (
         <InfoBanner>
           <strong className="text-brand-charcoal">Department file storage.</strong> Files are stored
-          in Backblaze B2. If uploads fail with &quot;Load failed&quot;, add CORS rules to your B2
-          bucket (see <code className="text-xs">docs/BACKBLAZE_B2_SETUP.md</code>).
+          in Backblaze B2. Uploads are limited to 4.5 MB per file on current hosting.
         </InfoBanner>
       ) : null}
 
@@ -135,7 +134,7 @@ export function FileLibraryManager() {
           <div>
             <h3 className="text-lg font-bold text-brand-charcoal">Upload file</h3>
             <p className="mt-1 text-sm text-brand-gray">
-              PDF, Word, Excel, plain text, or images up to 25 MB.
+              PDF, Word, Excel, plain text, or images up to 4.5 MB.
             </p>
           </div>
           <div>

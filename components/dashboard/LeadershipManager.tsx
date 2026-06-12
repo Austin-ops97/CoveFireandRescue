@@ -463,7 +463,7 @@ export function LeadershipManager() {
                   className="block w-full text-sm text-brand-gray file:mr-3 file:rounded-md file:border-0 file:bg-brand-red file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
                 />
                 <p className="text-xs text-brand-gray">
-                  JPEG, PNG, WebP, HEIC, or HEIF up to 15 MB.
+                  JPEG, PNG, WebP, HEIC, or HEIF up to 4.5 MB.
                 </p>
               </>
             ) : (

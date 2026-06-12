@@ -46,7 +46,7 @@ export function PhotoUploadControl({
         className="block w-full max-w-full text-sm text-brand-gray file:mr-3 file:rounded-md file:border-0 file:bg-brand-red file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
       />
       <p className="text-xs text-brand-gray">
-        {items.length} / {maxPhotos} photos · 15 MB max per image
+        {items.length} / {maxPhotos} photos · 4.5 MB max per image
         {uploadingCount > 0 ? ` · Uploading ${uploadingCount}…` : ""}
       </p>
 
