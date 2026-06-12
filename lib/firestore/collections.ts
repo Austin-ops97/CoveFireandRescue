@@ -9,6 +9,8 @@ export const COLLECTIONS = {
   checklistTemplates: "checklistTemplates",
   checklistSubmissions: "checklistSubmissions",
   files: "files",
+  trainingRecords: "trainingRecords",
+  equipment: "equipment",
   auditLogs: "auditLogs",
 } as const;
 
@@ -39,6 +41,11 @@ export const checklistSubmissionDocPath = (id: string): string =>
   `${COLLECTIONS.checklistSubmissions}/${id}`;
 
 export const fileDocPath = (id: string): string => `${COLLECTIONS.files}/${id}`;
+
+export const trainingRecordDocPath = (id: string): string =>
+  `${COLLECTIONS.trainingRecords}/${id}`;
+
+export const equipmentDocPath = (id: string): string => `${COLLECTIONS.equipment}/${id}`;
 
 export const auditLogDocPath = (id: string): string =>
   `${COLLECTIONS.auditLogs}/${id}`;

@@ -22,6 +22,9 @@ export type DashboardSummaryAdmin = DashboardSummaryBase & {
   checklistTemplateCount: number;
   recentSubmissionCount: number;
   failedSubmissionCount: number;
+  documentCount: number;
+  trainingRecordCount: number;
+  equipmentCount: number;
 };
 
 export type DashboardSummaryMember = DashboardSummaryBase & {

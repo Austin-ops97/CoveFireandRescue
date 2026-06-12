@@ -15,7 +15,17 @@ const ALLOWED_IMAGE_TYPES = [
   "image/heif",
 ] as const;
 
+const ALLOWED_DOCUMENT_TYPES = [
+  "application/pdf",
+  "text/plain",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+] as const;
+
 const MAX_IMAGE_SIZE_BYTES = 15 * 1024 * 1024;
+const MAX_DOCUMENT_SIZE_BYTES = 25 * 1024 * 1024;
 
 type B2UploadResult = {
   fileId: string;
@@ -71,12 +81,31 @@ export async function resolveStoredFiles(
   return data.files ?? {};
 }
 
-export async function uploadImageToB2(params: {
+function validateDocumentFile(file: File): void {
+  if (!file) {
+    throw new Error("Please choose a file to upload.");
+  }
+
+  const contentType = file.type.trim().toLowerCase();
+  const isImage = ALLOWED_IMAGE_TYPES.includes(contentType as (typeof ALLOWED_IMAGE_TYPES)[number]);
+  const isDocument = ALLOWED_DOCUMENT_TYPES.includes(
+    contentType as (typeof ALLOWED_DOCUMENT_TYPES)[number]
+  );
+
+  if (!isImage && !isDocument) {
+    throw new Error("File must be PDF, Word, Excel, plain text, or a supported image format.");
+  }
+
+  if (file.size <= 0 || file.size > MAX_DOCUMENT_SIZE_BYTES) {
+    throw new Error("File must be 25 MB or smaller.");
+  }
+}
+
+async function uploadFileToB2(params: {
   file: File;
-  module: "fleet" | "leadership" | "rounds";
+  module: "fleet" | "leadership" | "rounds" | "documents";
   relatedId?: string | null;
 }): Promise<StoredFileRecord> {
-  validateImageFile(params.file);
 
   const uploadUrlResponse = await authenticatedFetch("/api/storage/b2/upload-url", {
     method: "POST",
@@ -149,4 +178,25 @@ export async function uploadImageToB2(params: {
   }
 
   return completeData.file;
+}
+
+export async function uploadImageToB2(params: {
+  file: File;
+  module: "fleet" | "leadership" | "rounds";
+  relatedId?: string | null;
+}): Promise<StoredFileRecord> {
+  validateImageFile(params.file);
+  return uploadFileToB2(params);
+}
+
+export async function uploadDocumentToB2(params: {
+  file: File;
+  relatedId?: string | null;
+}): Promise<StoredFileRecord> {
+  validateDocumentFile(params.file);
+  return uploadFileToB2({
+    file: params.file,
+    module: "documents",
+    relatedId: params.relatedId ?? null,
+  });
 }

@@ -89,5 +89,15 @@ service cloud.firestore {
       allow read: if resource.data.visible == true || isAdmin();
       allow write: if isAdmin();
     }
+
+    match /trainingRecords/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /equipment/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
   }
 }

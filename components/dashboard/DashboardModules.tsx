@@ -117,23 +117,26 @@ const moduleGroups: ModuleGroup[] = [
   {
     id: "system",
     title: "System",
-    description: "Planned modules — not yet available.",
+    description: "Department files, training records, and equipment inventory.",
     adminOnly: true,
     modules: [
       {
         title: "File Library",
         description: "Department documents and uploaded files (Backblaze B2).",
-        status: "coming_soon",
+        href: "/dashboard/file-library",
+        status: "admin_only",
       },
       {
         title: "Training Records",
         description: "Member training hours and certifications.",
-        status: "coming_soon",
+        href: "/dashboard/training-records",
+        status: "admin_only",
       },
       {
         title: "Equipment Tracking",
         description: "Inventory and maintenance for tools and gear.",
-        status: "coming_soon",
+        href: "/dashboard/equipment-tracking",
+        status: "admin_only",
       },
     ],
   },

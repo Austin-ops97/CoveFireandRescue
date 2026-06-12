@@ -21,8 +21,10 @@ import {
   type DashboardSummaryAdmin,
   type DashboardSummaryMember,
 } from "@/lib/dashboard/types";
+import { serializeEquipmentDoc } from "@/lib/equipment/server";
 import { serializeFleetDoc } from "@/lib/fleet/server";
 import { serializeLeadershipDoc } from "@/lib/leadership/server";
+import { listStoredFilesByModule } from "@/lib/storage/server";
 
 const RECENT_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const RECENT_LIST_LIMIT = 5;
@@ -51,12 +53,18 @@ async function buildAdminSummary(): Promise<DashboardSummaryAdmin> {
     leadershipSnapshot,
     templateSnapshot,
     submissionSnapshot,
+    trainingSnapshot,
+    equipmentSnapshot,
+    documentFiles,
   ] = await Promise.all([
     adminDb.collection(COLLECTIONS.fleet).limit(200).get(),
     adminDb.collection(COLLECTIONS.announcements).limit(200).get(),
     adminDb.collection(COLLECTIONS.leadership).limit(200).get(),
     adminDb.collection(COLLECTIONS.checklistTemplates).limit(200).get(),
     adminDb.collection(COLLECTIONS.checklistSubmissions).limit(300).get(),
+    adminDb.collection(COLLECTIONS.trainingRecords).limit(300).get(),
+    adminDb.collection(COLLECTIONS.equipment).limit(300).get(),
+    listStoredFilesByModule("documents"),
   ]);
 
   const fleetCount = fleetSnapshot.docs
@@ -89,6 +97,11 @@ async function buildAdminSummary(): Promise<DashboardSummaryAdmin> {
     submissionHasAttentionItems(item, templateMap.get(item.templateId))
   );
 
+  const trainingRecordCount = trainingSnapshot.docs.length;
+  const equipmentCount = equipmentSnapshot.docs
+    .map((doc) => serializeEquipmentDoc(doc))
+    .filter((item) => item.status !== "retired").length;
+
   return {
     role: "admin",
     fleetCount,
@@ -97,6 +110,9 @@ async function buildAdminSummary(): Promise<DashboardSummaryAdmin> {
     checklistTemplateCount,
     recentSubmissionCount: recentSubmissions.length,
     failedSubmissionCount: failedSubmissions.length,
+    documentCount: documentFiles.length,
+    trainingRecordCount,
+    equipmentCount,
     recentSubmissions: submissions.slice(0, RECENT_LIST_LIMIT).map((item) =>
       toDashboardRecentSubmission(
         item,

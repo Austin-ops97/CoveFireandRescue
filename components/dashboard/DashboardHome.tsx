@@ -47,6 +47,21 @@ const ADMIN_QUICK_ACTIONS: QuickAction[] = [
     description: "Control member access and roles.",
     href: "/dashboard/users",
   },
+  {
+    title: "File library",
+    description: "Upload and manage department documents.",
+    href: "/dashboard/file-library",
+  },
+  {
+    title: "Training records",
+    description: "Track member hours and certifications.",
+    href: "/dashboard/training-records",
+  },
+  {
+    title: "Equipment tracking",
+    description: "Manage gear inventory and maintenance.",
+    href: "/dashboard/equipment-tracking",
+  },
 ];
 
 const MEMBER_QUICK_ACTIONS: QuickAction[] = [
@@ -161,6 +176,9 @@ export function DashboardHome() {
             <DashboardStatCard label="Fleet units" value={summary.fleetCount} />
             <DashboardStatCard label="Published announcements" value={summary.announcementCount} />
             <DashboardStatCard label="Leadership profiles" value={summary.leadershipCount} />
+            <DashboardStatCard label="Library files" value={summary.documentCount} />
+            <DashboardStatCard label="Training records" value={summary.trainingRecordCount} />
+            <DashboardStatCard label="Active equipment" value={summary.equipmentCount} />
           </div>
         </DashboardSection>
 

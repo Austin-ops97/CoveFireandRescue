@@ -4,6 +4,7 @@ export type AuditAction =
   | "storage.upload.requested"
   | "storage.upload.completed"
   | "storage.upload.failed"
+  | "storage.file.deleted"
   | "checklist.template.created"
   | "checklist.template.updated"
   | "checklist.template.archived"
