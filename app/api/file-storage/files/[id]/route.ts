@@ -68,15 +68,19 @@ export async function DELETE(request: Request, context: RouteContext) {
     }
 
     const file = serializeStorageFileDoc(snapshot);
+    const { searchParams } = new URL(request.url);
+    const metadataOnly = searchParams.get("metadataOnly") === "true";
 
-    await deleteStorageFile({ fileId: file.id, actor });
+    await deleteStorageFile({ fileId: file.id, actor, metadataOnly });
 
     await logStorageAction({
       action: "file_storage.file.deleted",
       actor,
       targetType: "storage_file",
       targetId: file.id,
-      message: `Deleted file ${file.displayName}`,
+      message: metadataOnly
+        ? `Removed library listing for ${file.displayName} (metadata only)`
+        : `Deleted file ${file.displayName}`,
     });
 
     return NextResponse.json({ ok: true });

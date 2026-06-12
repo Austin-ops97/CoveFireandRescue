@@ -396,7 +396,7 @@ export function FileStorageManager() {
     }
   }
 
-  async function handleDelete() {
+  async function handleDelete(metadataOnly = false) {
     if (!deleteTarget) return;
     setProcessing(true);
     setModalError(null);
@@ -407,9 +407,11 @@ export function FileStorageManager() {
           recursive: deleteRecursive,
         });
       } else {
-        await deleteStorageFile(deleteTarget.item.id);
+        await deleteStorageFile(deleteTarget.item.id, { metadataOnly });
       }
-      setMessage("Deleted successfully.");
+      setMessage(
+        metadataOnly ? "Removed from library." : "Deleted successfully."
+      );
       setDeleteOpen(false);
       setDeleteTarget(null);
       setDeleteRecursive(true);
@@ -930,6 +932,16 @@ export function FileStorageManager() {
               <Button type="button" variant="outline" onClick={closeDeleteModal}>
                 Cancel
               </Button>
+              {modalError && deleteTarget.type === "file" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={processing}
+                  onClick={() => void handleDelete(true)}
+                >
+                  {processing ? "Removing…" : "Remove from library anyway"}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="danger"
@@ -944,6 +956,12 @@ export function FileStorageManager() {
           {modalError && (
             <AlertBanner variant="error" title="Could not delete" className="mb-4">
               {modalError}
+              {deleteTarget.type === "file" ? (
+                <span className="mt-2 block text-sm">
+                  If the file is already gone from Backblaze, use{" "}
+                  <strong>Remove from library anyway</strong> to clear this listing.
+                </span>
+              ) : null}
             </AlertBanner>
           )}
           <p className="text-sm text-brand-charcoal">

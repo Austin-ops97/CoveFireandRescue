@@ -164,10 +164,17 @@ export async function moveStorageFile(params: {
   return data.file;
 }
 
-export async function deleteStorageFile(id: string): Promise<void> {
-  const response = await authenticatedFetch(`/api/file-storage/files/${id}`, {
-    method: "DELETE",
-  });
+export async function deleteStorageFile(
+  id: string,
+  options?: { metadataOnly?: boolean }
+): Promise<void> {
+  const searchParams = new URLSearchParams();
+  if (options?.metadataOnly) searchParams.set("metadataOnly", "true");
+  const query = searchParams.toString();
+  const response = await authenticatedFetch(
+    `/api/file-storage/files/${id}${query ? `?${query}` : ""}`,
+    { method: "DELETE" }
+  );
   if (!response.ok) throw new Error(await readApiError(response));
 }
 

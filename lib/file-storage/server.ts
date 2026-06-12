@@ -32,6 +32,7 @@ import {
   isB2Configured,
   uploadBytesToB2,
 } from "@/lib/storage/b2";
+import { shouldClearMetadataAfterB2DeleteFailure } from "@/lib/storage/b2-errors";
 import { MAX_SERVER_UPLOAD_BYTES } from "@/lib/storage/upload-server";
 import { serializeStoredFileDoc } from "@/lib/storage/server";
 
@@ -768,26 +769,25 @@ export async function moveStorageFile(params: {
 export async function deleteStorageFile(params: {
   fileId: string;
   actor: VerifiedServerUser;
+  metadataOnly?: boolean;
 }): Promise<void> {
   const file = await getFileById(params.fileId);
   if (!file) {
     throw new FileStorageValidationError("File not found.");
   }
 
-  if (file.b2FileId && file.b2Key) {
+  if (!params.metadataOnly && file.b2FileId && file.b2Key) {
     try {
       await deleteB2File({ fileName: file.b2Key, fileId: file.b2FileId });
     } catch (error) {
-      const detail = error instanceof Error ? error.message.toLowerCase() : "";
-      const alreadyGone =
-        detail.includes("404") ||
-        detail.includes("not found") ||
-        detail.includes("file_not_present") ||
-        detail.includes("no_such");
-      if (!alreadyGone) {
+      if (!shouldClearMetadataAfterB2DeleteFailure(error)) {
         throw error;
       }
-      console.warn("B2 object already absent; removing metadata for file:", file.id);
+      console.warn(
+        "B2 delete failed for missing or stale object; removing metadata for file:",
+        file.id,
+        error
+      );
     }
   }
 
