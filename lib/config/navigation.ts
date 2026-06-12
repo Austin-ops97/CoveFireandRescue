@@ -10,6 +10,7 @@ export const mainNavLinks: NavLink[] = [
   { href: "/about", label: "About" },
   { href: "/leadership", label: "Leadership" },
   { href: "/fleet", label: "Fleet" },
+  { href: "/gallery", label: "Gallery" },
   { href: "/announcements", label: "Updates" },
   { href: "/join", label: "Join Us" },
   { href: "/contact", label: "Contact" },
