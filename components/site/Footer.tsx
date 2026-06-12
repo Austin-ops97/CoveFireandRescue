@@ -10,23 +10,25 @@ export function Footer() {
 
   return (
     <footer className="border-t border-navy-800 bg-navy-900 text-gray-200">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="lg:col-span-1">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+        <div className="grid gap-6 sm:gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="flex items-start gap-3 sm:block lg:col-span-1">
             <Image
               src="/logo.png"
               alt="Cove Fire & Rescue logo"
               width={72}
               height={72}
-              className="mb-4 h-16 w-auto"
+              className="h-12 w-auto shrink-0 sm:mb-4 sm:h-16"
               unoptimized
             />
-            <p className="text-lg font-bold text-white">{siteConfig.name}</p>
-            <p className="mt-1 text-sm font-semibold text-gold-500">Chambers County, Texas</p>
-            <p className="mt-1 text-sm text-gray-300">Volunteer Fire Department</p>
-            <p className="mt-4 rounded-[10px] border border-red-700/50 bg-red-700/20 px-3 py-2 text-sm font-bold text-white">
-              For emergencies, call 911
-            </p>
+            <div className="min-w-0">
+              <p className="text-base font-bold text-white sm:text-lg">{siteConfig.name}</p>
+              <p className="mt-0.5 text-sm font-semibold text-gold-500">Chambers County, Texas</p>
+              <p className="mt-0.5 text-sm text-gray-300">Volunteer Fire Department</p>
+              <p className="mt-2 rounded-[10px] border border-red-700/50 bg-red-700/20 px-3 py-1.5 text-xs font-bold text-white sm:mt-4 sm:py-2 sm:text-sm">
+                For emergencies, call 911
+              </p>
+            </div>
           </div>
 
           <div>
@@ -59,11 +61,11 @@ export function Footer() {
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 text-xs leading-relaxed text-gray-400">{siteConfig.hours.note}</p>
               </li>
             </ul>
           </div>
 
+          <div className="grid grid-cols-2 gap-6 sm:contents">
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-gold-500">
               Connect
@@ -106,9 +108,10 @@ export function Footer() {
               ))}
             </ul>
           </div>
+          </div>
         </div>
 
-        <div className="mt-10 border-t border-white/10 pt-6 text-center text-xs text-gray-400">
+        <div className="mt-6 border-t border-white/10 pt-4 text-center text-xs text-gray-400 sm:mt-10 sm:pt-6">
           &copy; {currentYear} {siteConfig.name}. All rights reserved. · {siteConfig.yearsInService}{" "}
           years serving Chambers County
         </div>
