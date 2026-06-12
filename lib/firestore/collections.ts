@@ -12,6 +12,8 @@ export const COLLECTIONS = {
   trainingRecords: "trainingRecords",
   equipment: "equipment",
   auditLogs: "auditLogs",
+  storageFolders: "storageFolders",
+  storageFiles: "storageFiles",
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
@@ -49,3 +51,9 @@ export const equipmentDocPath = (id: string): string => `${COLLECTIONS.equipment
 
 export const auditLogDocPath = (id: string): string =>
   `${COLLECTIONS.auditLogs}/${id}`;
+
+export const storageFolderDocPath = (id: string): string =>
+  `${COLLECTIONS.storageFolders}/${id}`;
+
+export const storageFileDocPath = (id: string): string =>
+  `${COLLECTIONS.storageFiles}/${id}`;

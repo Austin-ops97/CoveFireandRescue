@@ -121,8 +121,8 @@ const moduleGroups: ModuleGroup[] = [
     adminOnly: true,
     modules: [
       {
-        title: "File Library",
-        description: "Department documents and uploaded files (Backblaze B2).",
+        title: "File Storage",
+        description: "Folder-based file manager with Backblaze B2 storage.",
         href: "/dashboard/file-library",
         status: "admin_only",
       },

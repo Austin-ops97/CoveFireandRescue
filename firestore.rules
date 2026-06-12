@@ -68,6 +68,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /storageFolders/{id} {
+      allow read: if isActiveMember();
+      allow write: if false;
+    }
+
+    match /storageFiles/{id} {
+      allow read: if isActiveMember();
+      allow write: if false;
+    }
+
     match /auditLogs/{id} {
       allow read: if isAdmin();
       allow write: if false;
