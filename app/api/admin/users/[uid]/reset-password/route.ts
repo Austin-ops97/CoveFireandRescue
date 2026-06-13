@@ -6,12 +6,15 @@ import {
 } from "@/lib/auth/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firestore/collections";
+import { writePasswordResetRequestedAudit } from "@/lib/email-provisioning/audit";
 import {
   UserAdminError,
   generatePasswordResetLink,
   setTemporaryPassword,
 } from "@/lib/users/admin-server";
 import { writeUserManagementAudit } from "@/lib/users/audit";
+import { getDisplayDepartmentEmail } from "@/lib/users/display";
+import { toManagedUserProfile } from "@/lib/users/profile";
 import { validateTemporaryPassword } from "@/lib/users/validation";
 
 type RouteContext = { params: Promise<{ uid: string }> };
@@ -43,10 +46,18 @@ export async function POST(request: Request, context: RouteContext) {
       return notFound("User profile not found.");
     }
 
-    const email =
-      typeof existing.data()?.email === "string" ? existing.data()!.email : null;
+    const existingData = existing.data() ?? {};
+    if (existingData.isDepartmentAlias === true || uid.startsWith("alias_")) {
+      return badRequest("Department alias accounts do not have portal login credentials.");
+    }
+    if (existingData.isPendingAuth === true || uid.startsWith("pending_")) {
+      return badRequest("Complete portal setup before resetting the portal password.");
+    }
+
+    const profile = toManagedUserProfile(uid, existingData, null);
+    const email = getDisplayDepartmentEmail(profile);
     if (!email) {
-      return badRequest("User does not have an email address on file.");
+      return badRequest("User does not have a login email address on file.");
     }
 
     let body: Record<string, unknown>;
@@ -79,6 +90,14 @@ export async function POST(request: Request, context: RouteContext) {
         mode === "reset_link"
           ? "Generated password setup link"
           : "Set temporary password",
+    });
+
+    await writePasswordResetRequestedAudit({
+      actorUid: actor.uid,
+      actorRole: actor.role!,
+      targetUserId: uid,
+      emailAddress: email,
+      result: "success",
     });
 
     return NextResponse.json({

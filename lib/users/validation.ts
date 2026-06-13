@@ -1,8 +1,4 @@
 import { isUserRole, type UserRole } from "@/lib/auth/roles";
-import {
-  parseCreateUserDepartmentEmail,
-  type CreateUserDepartmentEmailInput,
-} from "@/lib/email-provisioning/validation";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
@@ -48,68 +44,6 @@ export function validateTemporaryPassword(value: unknown): string | Error {
     return new Error(`Temporary password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
   }
   return value;
-}
-
-export type CreateUserInput = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: UserRole;
-  active: boolean;
-  phone: string | null;
-  title: string | null;
-  passwordMode: "temporary" | "reset_link";
-  temporaryPassword: string | null;
-  departmentEmail: CreateUserDepartmentEmailInput;
-};
-
-export function parseCreateUserBody(
-  body: Record<string, unknown>,
-  supportsUnlimited = true
-): CreateUserInput | Error {
-  const firstName = normalizeRequiredString(body.firstName, "First name");
-  if (firstName instanceof Error) return firstName;
-
-  const lastName = normalizeRequiredString(body.lastName, "Last name");
-  if (lastName instanceof Error) return lastName;
-
-  if (typeof body.email !== "string") {
-    return new Error("Email is required.");
-  }
-  const email = validateEmail(body.email);
-  if (email instanceof Error) return email;
-
-  const role = validateRole(body.role);
-  if (role instanceof Error) return role;
-
-  const active = validateActive(body.active);
-  if (active instanceof Error) return active;
-
-  const passwordMode =
-    body.passwordMode === "reset_link" ? "reset_link" : "temporary";
-
-  let temporaryPassword: string | null = null;
-  if (passwordMode === "temporary") {
-    const password = validateTemporaryPassword(body.temporaryPassword);
-    if (password instanceof Error) return password;
-    temporaryPassword = password;
-  }
-
-  const departmentEmail = parseCreateUserDepartmentEmail(body, supportsUnlimited);
-  if (departmentEmail instanceof Error) return departmentEmail;
-
-  return {
-    firstName,
-    lastName,
-    email,
-    role,
-    active,
-    phone: normalizeOptionalString(body.phone),
-    title: normalizeOptionalString(body.title),
-    passwordMode,
-    temporaryPassword,
-    departmentEmail,
-  };
 }
 
 export type UpdateUserInput = {

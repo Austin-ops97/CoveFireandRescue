@@ -6,6 +6,7 @@ import type {
   EditUserFormState,
   ManagedUserProfile,
   ResetPasswordFormState,
+  RetryPortalAuthFormState,
 } from "@/lib/users/types";
 
 async function readApiError(response: Response): Promise<string> {
@@ -35,9 +36,7 @@ export async function fetchManagedUsers(): Promise<ManagedUserProfile[]> {
 export type CreateUserResult = {
   user: ManagedUserProfile;
   message: string;
-  passwordSetupLink: string | null;
-  emailWarning?: string | null;
-  departmentEmail?: string | null;
+  departmentEmail: string | null;
 };
 
 export async function createManagedUser(
@@ -47,29 +46,17 @@ export async function createManagedUser(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      accountType: payload.accountType,
       firstName: payload.firstName.trim(),
       lastName: payload.lastName.trim(),
-      email: payload.email.trim(),
+      aliasUsername: payload.aliasUsername.trim(),
+      displayName: payload.aliasDisplayName.trim(),
+      departmentEmailUsername: payload.departmentEmailUsername.trim(),
       role: payload.role,
       active: payload.active,
-      phone: payload.phone.trim() || null,
-      title: payload.title.trim() || null,
-      passwordMode: payload.passwordMode,
-      temporaryPassword:
-        payload.passwordMode === "temporary" ? payload.temporaryPassword : null,
-      createDepartmentEmail: payload.createDepartmentEmail,
-      departmentEmailUsername: payload.createDepartmentEmail
-        ? payload.departmentEmailUsername.trim()
-        : null,
-      departmentEmailPassword: payload.createDepartmentEmail
-        ? payload.departmentEmailPassword
-        : null,
-      departmentEmailPasswordConfirm: payload.createDepartmentEmail
-        ? payload.departmentEmailPasswordConfirm
-        : null,
-      departmentEmailQuota: payload.createDepartmentEmail
-        ? payload.departmentEmailQuota
-        : null,
+      password: payload.password,
+      confirmPassword: payload.confirmPassword,
+      quotaMb: payload.departmentEmailQuota,
     }),
   });
 
@@ -162,4 +149,24 @@ export async function resetManagedUserPassword(
   }
 
   return (await response.json()) as ResetPasswordResult;
+}
+
+export async function retryPendingPortalAuth(
+  uid: string,
+  payload: RetryPortalAuthFormState
+): Promise<{ user: ManagedUserProfile; message: string }> {
+  const response = await authenticatedFetch(
+    `/api/admin/users/${encodeURIComponent(uid)}/retry-auth`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+
+  return (await response.json()) as { user: ManagedUserProfile; message: string };
 }

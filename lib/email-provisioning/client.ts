@@ -24,6 +24,14 @@ export type EmailProvisioningConfig = {
   supportsUnlimited: boolean;
 };
 
+export type DepartmentEmailSuggestion = {
+  configured: boolean;
+  domain: string | null;
+  username: string | null;
+  email: string | null;
+  available: boolean;
+};
+
 export async function fetchEmailProvisioningConfig(): Promise<EmailProvisioningConfig> {
   const response = await authenticatedFetch("/api/admin/email-provisioning/config");
 
@@ -32,6 +40,27 @@ export async function fetchEmailProvisioningConfig(): Promise<EmailProvisioningC
   }
 
   return (await response.json()) as EmailProvisioningConfig;
+}
+
+export async function fetchDepartmentEmailSuggestion(params: {
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+}): Promise<DepartmentEmailSuggestion> {
+  const search = new URLSearchParams();
+  if (params.firstName) search.set("firstName", params.firstName);
+  if (params.lastName) search.set("lastName", params.lastName);
+  if (params.username) search.set("username", params.username);
+
+  const response = await authenticatedFetch(
+    `/api/admin/email-provisioning/suggest?${search.toString()}`
+  );
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+
+  return (await response.json()) as DepartmentEmailSuggestion;
 }
 
 export type DepartmentEmailFormPayload = {

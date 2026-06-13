@@ -8,6 +8,10 @@ export type PasswordSetupMode = "temporary" | "reset_link";
 
 export type EmailProvisioningStatus = "none" | "pending" | "provisioned" | "failed";
 
+export type AuthProvisioningStatus = "none" | "pending" | "active" | "failed";
+
+export type CreateAccountType = "member" | "alias";
+
 export type ManagedUserProfile = {
   uid: string;
   email: string | null;
@@ -23,24 +27,26 @@ export type ManagedUserProfile = {
   departmentEmail: string | null;
   emailProvisioningStatus: EmailProvisioningStatus;
   emailProvisioningError: string | null;
+  authProvisioningStatus: AuthProvisioningStatus;
+  authProvisioningError: string | null;
+  isDepartmentAlias: boolean;
+  isPendingAuth: boolean;
   createdAt?: unknown;
   updatedAt?: unknown;
 };
 
 export type CreateUserFormState = {
+  accountType: CreateAccountType;
   firstName: string;
   lastName: string;
-  email: string;
+  aliasUsername: string;
+  aliasDisplayName: string;
+  departmentEmailUsername: string;
+  departmentEmailUsernameEdited: boolean;
   role: ManagedUserRole;
   active: boolean;
-  phone: string;
-  title: string;
-  passwordMode: PasswordSetupMode;
-  temporaryPassword: string;
-  createDepartmentEmail: boolean;
-  departmentEmailUsername: string;
-  departmentEmailPassword: string;
-  departmentEmailPasswordConfirm: string;
+  password: string;
+  confirmPassword: string;
   departmentEmailQuota: 1024 | 2048 | 5120 | 0;
 };
 
@@ -56,4 +62,9 @@ export type EditUserFormState = {
 export type ResetPasswordFormState = {
   mode: PasswordSetupMode;
   temporaryPassword: string;
+};
+
+export type RetryPortalAuthFormState = {
+  password: string;
+  confirmPassword: string;
 };

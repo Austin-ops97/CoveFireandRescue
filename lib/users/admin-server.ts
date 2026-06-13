@@ -4,7 +4,6 @@ import type { UserRecord } from "firebase-admin/auth";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firestore/collections";
 import { buildDisplayName } from "@/lib/users/profile";
-import type { CreateUserInput } from "@/lib/users/validation";
 
 export class UserAdminError extends Error {
   readonly status: number;
@@ -76,21 +75,18 @@ export async function ensureNotLastAdmin(
   }
 }
 
-export async function createFirebaseAuthUser(
-  input: CreateUserInput
-): Promise<UserRecord> {
+export async function createFirebaseAuthUserWithEmail(params: {
+  email: string;
+  password: string;
+  displayName: string | null;
+  active: boolean;
+}): Promise<UserRecord> {
   try {
-    const displayName = buildDisplayName(input.firstName, input.lastName);
-    const password =
-      input.passwordMode === "temporary" && input.temporaryPassword
-        ? input.temporaryPassword
-        : generateRandomPassword();
-
     return await adminAuth.createUser({
-      email: input.email,
-      password,
-      displayName: displayName ?? undefined,
-      disabled: !input.active,
+      email: params.email,
+      password: params.password,
+      displayName: params.displayName ?? undefined,
+      disabled: !params.active,
     });
   } catch (error) {
     throw mapAuthError(error);

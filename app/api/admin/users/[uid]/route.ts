@@ -70,6 +70,14 @@ export async function PATCH(request: Request, context: RouteContext) {
     const previousRole = existingData.role;
     const displayName = buildDisplayName(parsed.firstName, parsed.lastName);
 
+    if (existingData.isDepartmentAlias === true || uid.startsWith("alias_")) {
+      return badRequest("Department alias accounts cannot be edited as portal users.");
+    }
+
+    if (existingData.isPendingAuth === true || uid.startsWith("pending_")) {
+      return badRequest("Complete portal setup before editing this user.");
+    }
+
     await updateAuthUserProfile(uid, {
       displayName: displayName ?? undefined,
       disabled: !parsed.active,
@@ -153,7 +161,9 @@ export async function DELETE(request: Request, context: RouteContext) {
     }
 
     if (permanent) {
-      await deleteFirebaseAuthUser(uid);
+      if (!existingData.isDepartmentAlias && !uid.startsWith("alias_") && !uid.startsWith("pending_")) {
+        await deleteFirebaseAuthUser(uid);
+      }
       await docRef.delete();
 
       await writeUserManagementAudit({
@@ -169,15 +179,34 @@ export async function DELETE(request: Request, context: RouteContext) {
       return NextResponse.json({ message: "User permanently deleted." });
     }
 
-    await setAuthUserDisabled(uid, true);
-    await docRef.set(
-      {
-        active: false,
-        disabledAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+    if (existingData.isDepartmentAlias === true || uid.startsWith("alias_")) {
+      await docRef.set(
+        {
+          active: false,
+          disabledAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } else if (existingData.isPendingAuth === true || uid.startsWith("pending_")) {
+      await docRef.set(
+        {
+          active: false,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } else {
+      await setAuthUserDisabled(uid, true);
+      await docRef.set(
+        {
+          active: false,
+          disabledAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
 
     await writeUserManagementAudit({
       action: "user.disabled",

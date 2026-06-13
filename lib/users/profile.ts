@@ -2,7 +2,11 @@ import "server-only";
 
 import { Timestamp } from "firebase-admin/firestore";
 import { isUserRole, type UserRole } from "@/lib/auth/roles";
-import type { ManagedUserProfile, EmailProvisioningStatus } from "@/lib/users/types";
+import type {
+  AuthProvisioningStatus,
+  EmailProvisioningStatus,
+  ManagedUserProfile,
+} from "@/lib/users/types";
 
 export function buildDisplayName(
   firstName: string | null,
@@ -45,6 +49,27 @@ function readEmailProvisioningStatus(value: unknown): EmailProvisioningStatus {
   return "none";
 }
 
+function readAuthProvisioningStatus(
+  value: unknown,
+  uid: string,
+  isDepartmentAlias: boolean,
+  isPendingAuth: boolean
+): AuthProvisioningStatus {
+  if (isDepartmentAlias) return "none";
+  if (isPendingAuth) return "failed";
+  if (
+    value === "none" ||
+    value === "pending" ||
+    value === "active" ||
+    value === "failed"
+  ) {
+    return value;
+  }
+  if (uid.startsWith("pending_")) return "failed";
+  if (uid.startsWith("alias_")) return "none";
+  return "active";
+}
+
 export function toManagedUserProfile(
   uid: string,
   data: Record<string, unknown>,
@@ -53,6 +78,8 @@ export function toManagedUserProfile(
   const firstName = typeof data.firstName === "string" ? data.firstName : null;
   const lastName = typeof data.lastName === "string" ? data.lastName : null;
   const legacyDisplayName = typeof data.displayName === "string" ? data.displayName : null;
+  const isDepartmentAlias = data.isDepartmentAlias === true;
+  const isPendingAuth = data.isPendingAuth === true;
 
   return {
     uid,
@@ -73,6 +100,16 @@ export function toManagedUserProfile(
       typeof data.emailProvisioningError === "string"
         ? data.emailProvisioningError
         : null,
+    authProvisioningStatus: readAuthProvisioningStatus(
+      data.authProvisioningStatus,
+      uid,
+      isDepartmentAlias,
+      isPendingAuth
+    ),
+    authProvisioningError:
+      typeof data.authProvisioningError === "string" ? data.authProvisioningError : null,
+    isDepartmentAlias,
+    isPendingAuth,
     createdAt: serializeTimestamp(data.createdAt) ?? data.createdAt ?? null,
     updatedAt: serializeTimestamp(data.updatedAt) ?? data.updatedAt ?? null,
   };

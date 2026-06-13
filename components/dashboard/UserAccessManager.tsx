@@ -16,51 +16,49 @@ import {
 } from "@/components/ui";
 import { USER_ROLES, roleLabel } from "@/lib/auth/roles";
 import {
+  fetchDepartmentEmailSuggestion,
+  fetchEmailProvisioningConfig,
+  resetDepartmentEmailPassword,
+  type EmailProvisioningConfig,
+} from "@/lib/email-provisioning/client";
+import {
+  LEADERSHIP_ALIAS_USERNAMES,
+  suggestDepartmentEmailUsername,
+} from "@/lib/email-provisioning/validation";
+import {
   createManagedUser,
   deleteManagedUserPermanently,
   disableManagedUser,
   fetchManagedUsers,
   resetManagedUserPassword,
+  retryPendingPortalAuth,
   updateManagedUser,
 } from "@/lib/users/client";
-import {
-  fetchEmailProvisioningConfig,
-  provisionDepartmentEmail,
-  resetDepartmentEmailPassword,
-  type EmailProvisioningConfig,
-} from "@/lib/email-provisioning/client";
-import { suggestDepartmentEmailUsername } from "@/lib/email-provisioning/validation";
+import { getDisplayDepartmentEmail } from "@/lib/users/display";
 import type {
+  AuthProvisioningStatus,
   CreateUserFormState,
   EditUserFormState,
   EmailProvisioningStatus,
   ManagedUserProfile,
   ManagedUserRole,
   ResetPasswordFormState,
+  RetryPortalAuthFormState,
 } from "@/lib/users/types";
 
 const emptyCreateForm: CreateUserFormState = {
+  accountType: "member",
   firstName: "",
   lastName: "",
-  email: "",
+  aliasUsername: "chief",
+  aliasDisplayName: "",
+  departmentEmailUsername: "",
+  departmentEmailUsernameEdited: false,
   role: "member",
   active: true,
-  phone: "",
-  title: "",
-  passwordMode: "reset_link",
-  temporaryPassword: "",
-  createDepartmentEmail: false,
-  departmentEmailUsername: "",
-  departmentEmailPassword: "",
-  departmentEmailPasswordConfirm: "",
-  departmentEmailQuota: 1024,
-};
-
-const emptyDepartmentEmailForm = {
-  emailUsername: "",
   password: "",
   confirmPassword: "",
-  quotaMb: 1024 as 1024 | 2048 | 5120 | 0,
+  departmentEmailQuota: 1024,
 };
 
 const emptyEditForm: EditUserFormState = {
@@ -77,16 +75,24 @@ const emptyResetForm: ResetPasswordFormState = {
   temporaryPassword: "",
 };
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const emptyRetryAuthForm: RetryPortalAuthFormState = {
+  password: "",
+  confirmPassword: "",
+};
+
+const emptyEmailResetForm = {
+  password: "",
+  confirmPassword: "",
+};
 
 type ModalMode =
   | "create"
   | "edit"
   | "reset"
+  | "retry-auth"
+  | "email-reset"
   | "disable"
   | "delete"
-  | "department-email"
-  | "department-email-reset"
   | null;
 
 function formatTimestamp(value: unknown): string {
@@ -117,35 +123,6 @@ function profileToEditForm(profile: ManagedUserProfile): EditUserFormState {
   };
 }
 
-function validateCreateForm(
-  form: CreateUserFormState,
-  emailConfigured: boolean
-): string | null {
-  if (!form.firstName.trim()) return "First name is required.";
-  if (!form.lastName.trim()) return "Last name is required.";
-  if (!form.email.trim() || !EMAIL_PATTERN.test(form.email.trim())) {
-    return "A valid email address is required.";
-  }
-  if (form.passwordMode === "temporary" && form.temporaryPassword.length < 8) {
-    return "Temporary password must be at least 8 characters.";
-  }
-  if (form.createDepartmentEmail) {
-    if (!emailConfigured) {
-      return "Department email provisioning is not configured on this server.";
-    }
-    if (!form.departmentEmailUsername.trim()) {
-      return "Email username is required.";
-    }
-    if (form.departmentEmailPassword.length < 8) {
-      return "Department email password must be at least 8 characters.";
-    }
-    if (form.departmentEmailPassword !== form.departmentEmailPasswordConfirm) {
-      return "Department email password and confirm password must match.";
-    }
-  }
-  return null;
-}
-
 function emailStatusLabel(status: EmailProvisioningStatus): string {
   if (status === "provisioned") return "Provisioned";
   if (status === "pending") return "Pending";
@@ -153,11 +130,52 @@ function emailStatusLabel(status: EmailProvisioningStatus): string {
   return "Not created";
 }
 
+function authStatusLabel(status: AuthProvisioningStatus, user: ManagedUserProfile): string {
+  if (user.isDepartmentAlias) return "Email only";
+  if (user.isPendingAuth) return "Incomplete";
+  if (status === "active") return "Active";
+  if (status === "failed") return "Failed";
+  if (status === "pending") return "Pending";
+  return "Legacy";
+}
+
 function emailStatusVariant(status: EmailProvisioningStatus) {
   if (status === "provisioned") return "active" as const;
   if (status === "failed") return "inactive" as const;
   if (status === "pending") return "info" as const;
   return "neutral" as const;
+}
+
+function authStatusVariant(status: AuthProvisioningStatus, user: ManagedUserProfile) {
+  if (user.isDepartmentAlias) return "neutral" as const;
+  if (user.isPendingAuth || status === "failed") return "inactive" as const;
+  if (status === "active") return "active" as const;
+  return "info" as const;
+}
+
+function validateCreateForm(
+  form: CreateUserFormState,
+  emailConfigured: boolean
+): string | null {
+  if (!emailConfigured) {
+    return "Department email provisioning is not configured on this server.";
+  }
+
+  if (form.accountType === "alias") {
+    if (!form.aliasDisplayName.trim()) return "Display name is required.";
+    if (!form.aliasUsername.trim()) return "Select a department alias address.";
+  } else {
+    if (!form.firstName.trim()) return "First name is required.";
+    if (!form.lastName.trim()) return "Last name is required.";
+    if (!form.departmentEmailUsername.trim()) return "Department email username is required.";
+  }
+
+  if (form.password.length < 8) return "Password must be at least 8 characters.";
+  if (form.password !== form.confirmPassword) {
+    return "Password and confirm password must match.";
+  }
+
+  return null;
 }
 
 function validateEditForm(form: EditUserFormState): string | null {
@@ -174,10 +192,12 @@ export function UserAccessManager() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [passwordSetupLink, setPasswordSetupLink] = useState<string | null>(null);
   const [emailConfig, setEmailConfig] = useState<EmailProvisioningConfig | null>(null);
-  const [departmentEmailForm, setDepartmentEmailForm] = useState(emptyDepartmentEmailForm);
+  const [previewEmail, setPreviewEmail] = useState<string | null>(null);
+  const [previewAvailable, setPreviewAvailable] = useState<boolean | null>(null);
+  const [emailResetForm, setEmailResetForm] = useState(emptyEmailResetForm);
+  const [retryAuthForm, setRetryAuthForm] = useState(emptyRetryAuthForm);
 
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<ManagedUserRole | "all">("all");
@@ -227,22 +247,54 @@ export function UserAccessManager() {
   }, []);
 
   useEffect(() => {
-    if (modalMode !== "create" || !createForm.createDepartmentEmail) return;
-    const suggested = suggestDepartmentEmailUsername(
-      createForm.firstName,
-      createForm.lastName
-    );
-    if (!suggested) return;
-    setCreateForm((prev) => {
-      if (prev.departmentEmailUsername.trim()) return prev;
-      return { ...prev, departmentEmailUsername: suggested };
-    });
+    if (modalMode !== "create" || createForm.accountType !== "member") return;
+    if (!createForm.firstName.trim() || !createForm.lastName.trim()) {
+      setPreviewEmail(null);
+      setPreviewAvailable(null);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void fetchDepartmentEmailSuggestion({
+        firstName: createForm.firstName,
+        lastName: createForm.lastName,
+        username: createForm.departmentEmailUsernameEdited
+          ? createForm.departmentEmailUsername
+          : undefined,
+      })
+        .then((result) => {
+          setPreviewEmail(result.email);
+          setPreviewAvailable(result.available);
+          if (!createForm.departmentEmailUsernameEdited && result.username) {
+            setCreateForm((prev) => ({
+              ...prev,
+              departmentEmailUsername: result.username ?? "",
+            }));
+          }
+        })
+        .catch(() => {
+          const fallback = suggestDepartmentEmailUsername(
+            createForm.firstName,
+            createForm.lastName
+          );
+          const domain = emailConfig?.domain;
+          setPreviewEmail(domain ? `${fallback}@${domain}` : null);
+          setPreviewAvailable(null);
+          if (!createForm.departmentEmailUsernameEdited) {
+            setCreateForm((prev) => ({ ...prev, departmentEmailUsername: fallback }));
+          }
+        });
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
   }, [
     modalMode,
-    createForm.createDepartmentEmail,
+    createForm.accountType,
     createForm.firstName,
     createForm.lastName,
     createForm.departmentEmailUsername,
+    createForm.departmentEmailUsernameEdited,
+    emailConfig?.domain,
   ]);
 
   const filteredUsers = useMemo(() => {
@@ -258,6 +310,7 @@ export function UserAccessManager() {
         user.firstName,
         user.lastName,
         user.email,
+        user.departmentEmail,
         user.title,
         user.phone,
       ]
@@ -276,40 +329,18 @@ export function UserAccessManager() {
     setCreateForm(emptyCreateForm);
     setEditForm(emptyEditForm);
     setResetForm(emptyResetForm);
-    setDepartmentEmailForm(emptyDepartmentEmailForm);
+    setRetryAuthForm(emptyRetryAuthForm);
+    setEmailResetForm(emptyEmailResetForm);
+    setPreviewEmail(null);
+    setPreviewAvailable(null);
   }
 
   function openCreateModal() {
     setSuccessMessage(null);
-    setWarningMessage(null);
     setPasswordSetupLink(null);
     setActionError(null);
     setCreateForm(emptyCreateForm);
     setModalMode("create");
-  }
-
-  function openDepartmentEmailModal(user: ManagedUserProfile) {
-    setActionError(null);
-    setSelectedUser(user);
-    setDepartmentEmailForm({
-      ...emptyDepartmentEmailForm,
-      emailUsername: suggestDepartmentEmailUsername(
-        user.firstName ?? "",
-        user.lastName ?? ""
-      ),
-      quotaMb: (emailConfig?.quotaOptions[0]?.value ?? 1024) as 1024 | 2048 | 5120 | 0,
-    });
-    setModalMode("department-email");
-  }
-
-  function openDepartmentEmailResetModal(user: ManagedUserProfile) {
-    setActionError(null);
-    setSelectedUser(user);
-    setDepartmentEmailForm({
-      ...emptyDepartmentEmailForm,
-      emailUsername: "",
-    });
-    setModalMode("department-email-reset");
   }
 
   function openEditModal(user: ManagedUserProfile) {
@@ -327,6 +358,20 @@ export function UserAccessManager() {
     setModalMode("reset");
   }
 
+  function openRetryAuthModal(user: ManagedUserProfile) {
+    setActionError(null);
+    setSelectedUser(user);
+    setRetryAuthForm(emptyRetryAuthForm);
+    setModalMode("retry-auth");
+  }
+
+  function openEmailResetModal(user: ManagedUserProfile) {
+    setActionError(null);
+    setSelectedUser(user);
+    setEmailResetForm(emptyEmailResetForm);
+    setModalMode("email-reset");
+  }
+
   function openDisableModal(user: ManagedUserProfile) {
     setActionError(null);
     setSelectedUser(user);
@@ -342,7 +387,6 @@ export function UserAccessManager() {
   async function handleCreateSubmit(event: React.FormEvent) {
     event.preventDefault();
     setActionError(null);
-    setPasswordSetupLink(null);
 
     const validationError = validateCreateForm(createForm, emailConfig?.configured ?? false);
     if (validationError) {
@@ -356,10 +400,6 @@ export function UserAccessManager() {
       await loadUsers(true);
       closeModal();
       setSuccessMessage(result.message);
-      setWarningMessage(result.emailWarning ?? null);
-      if (result.passwordSetupLink) {
-        setPasswordSetupLink(result.passwordSetupLink);
-      }
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Failed to create user.");
     } finally {
@@ -406,12 +446,63 @@ export function UserAccessManager() {
     try {
       const result = await resetManagedUserPassword(selectedUser.uid, resetForm);
       setSuccessMessage(result.message);
-      if (result.passwordSetupLink) {
-        setPasswordSetupLink(result.passwordSetupLink);
-      }
+      if (result.passwordSetupLink) setPasswordSetupLink(result.passwordSetupLink);
       closeModal();
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Failed to reset password.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleRetryAuthSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selectedUser) return;
+    setActionError(null);
+
+    if (retryAuthForm.password.length < 8) {
+      setActionError("Password must be at least 8 characters.");
+      return;
+    }
+    if (retryAuthForm.password !== retryAuthForm.confirmPassword) {
+      setActionError("Password and confirm password must match.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const result = await retryPendingPortalAuth(selectedUser.uid, retryAuthForm);
+      await loadUsers(true);
+      closeModal();
+      setSuccessMessage(result.message);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to complete portal setup.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleEmailResetSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selectedUser) return;
+    setActionError(null);
+
+    if (emailResetForm.password.length < 8) {
+      setActionError("Password must be at least 8 characters.");
+      return;
+    }
+    if (emailResetForm.password !== emailResetForm.confirmPassword) {
+      setActionError("Password and confirm password must match.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const result = await resetDepartmentEmailPassword(selectedUser.uid, emailResetForm);
+      closeModal();
+      setSuccessMessage(result.message);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to reset email password.");
     } finally {
       setSaving(false);
     }
@@ -428,71 +519,6 @@ export function UserAccessManager() {
       setSuccessMessage(`${selectedUser.displayName ?? "User"} has been disabled.`);
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Failed to disable user.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDepartmentEmailSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!selectedUser) return;
-    setActionError(null);
-
-    if (!departmentEmailForm.emailUsername.trim()) {
-      setActionError("Email username is required.");
-      return;
-    }
-    if (departmentEmailForm.password.length < 8) {
-      setActionError("Email password must be at least 8 characters.");
-      return;
-    }
-    if (departmentEmailForm.password !== departmentEmailForm.confirmPassword) {
-      setActionError("Password and confirm password must match.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const result = await provisionDepartmentEmail(selectedUser.uid, departmentEmailForm);
-      await loadUsers(true);
-      closeModal();
-      setSuccessMessage(result.message);
-      setWarningMessage(null);
-    } catch (error) {
-      setActionError(
-        error instanceof Error ? error.message : "Failed to provision department email."
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDepartmentEmailResetSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!selectedUser) return;
-    setActionError(null);
-
-    if (departmentEmailForm.password.length < 8) {
-      setActionError("Email password must be at least 8 characters.");
-      return;
-    }
-    if (departmentEmailForm.password !== departmentEmailForm.confirmPassword) {
-      setActionError("Password and confirm password must match.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const result = await resetDepartmentEmailPassword(selectedUser.uid, {
-        password: departmentEmailForm.password,
-        confirmPassword: departmentEmailForm.confirmPassword,
-      });
-      closeModal();
-      setSuccessMessage(result.message);
-    } catch (error) {
-      setActionError(
-        error instanceof Error ? error.message : "Failed to reset department email password."
-      );
     } finally {
       setSaving(false);
     }
@@ -519,8 +545,8 @@ export function UserAccessManager() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-brand-gray">
-            Create and manage portal accounts. User IDs are assigned automatically by the
-            authentication system.
+            Create portal members with Cove Fire &amp; Rescue department email addresses. Legacy
+            personal-email accounts remain supported.
           </p>
         </div>
         <Button type="button" onClick={openCreateModal}>
@@ -529,12 +555,6 @@ export function UserAccessManager() {
       </div>
 
       {successMessage && <AlertBanner variant="success">{successMessage}</AlertBanner>}
-
-      {warningMessage && (
-        <AlertBanner variant="warning" title="Department email warning">
-          {warningMessage}
-        </AlertBanner>
-      )}
 
       {passwordSetupLink && (
         <AlertBanner variant="info" title="Password setup link">
@@ -567,7 +587,7 @@ export function UserAccessManager() {
             <Input
               id="userSearch"
               type="search"
-              placeholder="Name, email, title…"
+              placeholder="Name, department email, title…"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -617,7 +637,7 @@ export function UserAccessManager() {
           title={users.length === 0 ? "No users yet" : "No users match your filters"}
           description={
             users.length === 0
-              ? "Create the first portal user with the button above."
+              ? "Create the first member account with the button above."
               : "Try adjusting your search or filters."
           }
         />
@@ -632,7 +652,9 @@ export function UserAccessManager() {
                   <thead className="bg-gray-50/90">
                     <tr>
                       <th className="px-4 py-3 font-semibold text-brand-charcoal">Name</th>
-                      <th className="px-4 py-3 font-semibold text-brand-charcoal">Email</th>
+                      <th className="px-4 py-3 font-semibold text-brand-charcoal">
+                        Department email
+                      </th>
                       <th className="px-4 py-3 font-semibold text-brand-charcoal">Role</th>
                       <th className="px-4 py-3 font-semibold text-brand-charcoal">Status</th>
                       <th className="px-4 py-3 font-semibold text-brand-charcoal">Last login</th>
@@ -645,11 +667,16 @@ export function UserAccessManager() {
                       <tr key={user.uid} className="hover:bg-brand-charcoal/[0.02]">
                         <td className="px-4 py-3 font-medium text-brand-charcoal">
                           <div>{user.displayName || "—"}</div>
-                          {user.title && (
-                            <div className="text-xs text-brand-gray">{user.title}</div>
+                          {user.isDepartmentAlias && (
+                            <div className="text-xs text-brand-gray">Department alias</div>
+                          )}
+                          {user.isPendingAuth && (
+                            <div className="text-xs text-amber-700">Portal setup incomplete</div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-brand-gray">{user.email || "—"}</td>
+                        <td className="px-4 py-3 text-brand-gray">
+                          {getDisplayDepartmentEmail(user) || "—"}
+                        </td>
                         <td className="px-4 py-3">
                           <StatusBadge
                             label={roleLabel(user.role)}
@@ -670,20 +697,43 @@ export function UserAccessManager() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(user)}
-                              className="text-xs font-semibold text-brand-red hover:underline"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openResetModal(user)}
-                              className="text-xs font-semibold text-brand-blue hover:underline"
-                            >
-                              Reset password
-                            </button>
+                            {!user.isDepartmentAlias && (
+                              <button
+                                type="button"
+                                onClick={() => openEditModal(user)}
+                                className="text-xs font-semibold text-brand-red hover:underline"
+                              >
+                                Edit
+                              </button>
+                            )}
+                            {!user.isDepartmentAlias && !user.isPendingAuth && (
+                              <button
+                                type="button"
+                                onClick={() => openResetModal(user)}
+                                className="text-xs font-semibold text-brand-blue hover:underline"
+                              >
+                                Reset portal password
+                              </button>
+                            )}
+                            {user.isPendingAuth && (
+                              <button
+                                type="button"
+                                onClick={() => openRetryAuthModal(user)}
+                                className="text-xs font-semibold text-brand-red hover:underline"
+                              >
+                                Retry portal setup
+                              </button>
+                            )}
+                            {user.emailProvisioningStatus === "provisioned" &&
+                              getDisplayDepartmentEmail(user) && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEmailResetModal(user)}
+                                  className="text-xs font-semibold text-brand-blue hover:underline"
+                                >
+                                  Reset email password
+                                </button>
+                              )}
                             {user.active && (
                               <button
                                 type="button"
@@ -718,8 +768,9 @@ export function UserAccessManager() {
                     <h3 className="font-bold text-brand-charcoal">
                       {user.displayName || "Unnamed user"}
                     </h3>
-                    <p className="mt-1 text-sm text-brand-gray">{user.email || "No email"}</p>
-                    {user.title && <p className="text-xs text-brand-gray">{user.title}</p>}
+                    <p className="mt-1 text-sm text-brand-gray">
+                      {getDisplayDepartmentEmail(user) || "No department email"}
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <StatusBadge label={roleLabel(user.role)} variant={roleBadgeVariant(user.role)} />
@@ -729,20 +780,15 @@ export function UserAccessManager() {
                     />
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-brand-gray">
-                  Last login {formatTimestamp(user.lastLoginAt)} · Created{" "}
-                  {formatTimestamp(user.createdAt)}
-                </p>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => openEditModal(user)}>
-                    Edit
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => openResetModal(user)}>
-                    Reset password
-                  </Button>
-                  {user.active && (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => openDisableModal(user)}>
-                      Disable
+                  {!user.isDepartmentAlias && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => openEditModal(user)}>
+                      Edit
+                    </Button>
+                  )}
+                  {user.isPendingAuth && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => openRetryAuthModal(user)}>
+                      Retry setup
                     </Button>
                   )}
                 </div>
@@ -755,7 +801,7 @@ export function UserAccessManager() {
       {modalMode === "create" && (
         <Modal
           title="Create user"
-          description="A secure account will be created automatically. No UID is required."
+          description="A department email and portal account will be created automatically."
           onClose={closeModal}
           footer={
             <>
@@ -769,260 +815,213 @@ export function UserAccessManager() {
           }
         >
           <form id="create-user-form" onSubmit={handleCreateSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField id="createFirstName" label="First name" required>
-                <Input
-                  id="createFirstName"
-                  value={createForm.firstName}
-                  onChange={(event) =>
-                    setCreateForm((prev) => ({ ...prev, firstName: event.target.value }))
-                  }
-                  required
-                />
-              </FormField>
-              <FormField id="createLastName" label="Last name" required>
-                <Input
-                  id="createLastName"
-                  value={createForm.lastName}
-                  onChange={(event) =>
-                    setCreateForm((prev) => ({ ...prev, lastName: event.target.value }))
-                  }
-                  required
-                />
-              </FormField>
-            </div>
-            <FormField id="createEmail" label="Email" required>
-              <Input
-                id="createEmail"
-                type="email"
-                value={createForm.email}
-                onChange={(event) =>
-                  setCreateForm((prev) => ({ ...prev, email: event.target.value }))
-                }
-                required
-              />
-            </FormField>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField id="createRole" label="Role" required>
-                <Select
-                  id="createRole"
-                  value={createForm.role}
-                  onChange={(event) =>
-                    setCreateForm((prev) => ({
-                      ...prev,
-                      role: event.target.value as ManagedUserRole,
-                    }))
-                  }
-                >
-                  {USER_ROLES.map((role) => (
-                    <option key={role} value={role}>
-                      {roleLabel(role)}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-              <FormField id="createStatus" label="Status" required>
-                <Select
-                  id="createStatus"
-                  value={createForm.active ? "active" : "inactive"}
-                  onChange={(event) =>
-                    setCreateForm((prev) => ({
-                      ...prev,
-                      active: event.target.value === "active",
-                    }))
-                  }
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </Select>
-              </FormField>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField id="createPhone" label="Phone">
-                <Input
-                  id="createPhone"
-                  type="tel"
-                  value={createForm.phone}
-                  onChange={(event) =>
-                    setCreateForm((prev) => ({ ...prev, phone: event.target.value }))
-                  }
-                />
-              </FormField>
-              <FormField id="createTitle" label="Title / department">
-                <Input
-                  id="createTitle"
-                  value={createForm.title}
-                  onChange={(event) =>
-                    setCreateForm((prev) => ({ ...prev, title: event.target.value }))
-                  }
-                />
-              </FormField>
-            </div>
-            <FormField
-              id="createPasswordMode"
-              label="Password setup"
-              hint="Password setup links are more secure. Share the generated link with the user."
-            >
+            <FormField id="createAccountType" label="Account type">
               <Select
-                id="createPasswordMode"
-                value={createForm.passwordMode}
+                id="createAccountType"
+                value={createForm.accountType}
                 onChange={(event) =>
                   setCreateForm((prev) => ({
                     ...prev,
-                    passwordMode: event.target.value as CreateUserFormState["passwordMode"],
+                    accountType: event.target.value as CreateUserFormState["accountType"],
                   }))
                 }
               >
-                <option value="reset_link">Generate password setup link</option>
-                <option value="temporary">Set temporary password</option>
+                <option value="member">Member portal account</option>
+                <option value="alias">Department alias email</option>
               </Select>
             </FormField>
-            {createForm.passwordMode === "temporary" && (
-              <FormField id="createTempPassword" label="Temporary password" required>
+
+            {createForm.accountType === "member" ? (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField id="createFirstName" label="First name" required>
+                    <Input
+                      id="createFirstName"
+                      value={createForm.firstName}
+                      onChange={(event) =>
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          firstName: event.target.value,
+                          departmentEmailUsernameEdited: false,
+                        }))
+                      }
+                      required
+                    />
+                  </FormField>
+                  <FormField id="createLastName" label="Last name" required>
+                    <Input
+                      id="createLastName"
+                      value={createForm.lastName}
+                      onChange={(event) =>
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          lastName: event.target.value,
+                          departmentEmailUsernameEdited: false,
+                        }))
+                      }
+                      required
+                    />
+                  </FormField>
+                </div>
+
+                <div className="rounded-xl border border-brand-gray/15 bg-brand-charcoal/[0.02] p-4 sm:p-5">
+                  <FormField id="createDepartmentEmailUsername" label="Department email" required>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        id="createDepartmentEmailUsername"
+                        value={createForm.departmentEmailUsername}
+                        onChange={(event) =>
+                          setCreateForm((prev) => ({
+                            ...prev,
+                            departmentEmailUsername: event.target.value.toLowerCase(),
+                            departmentEmailUsernameEdited: true,
+                          }))
+                        }
+                        autoComplete="off"
+                        required
+                        className="rounded-r-none"
+                      />
+                      <span className="rounded-r-lg border border-l-0 border-brand-gray/20 bg-gray-50 px-3 py-2 text-sm text-brand-gray">
+                        @{emailConfig?.domain ?? "domain"}
+                      </span>
+                    </div>
+                  </FormField>
+                  {previewEmail && (
+                    <p className="mt-2 text-sm text-brand-gray">
+                      Login email: <span className="font-medium text-brand-charcoal">{previewEmail}</span>
+                    </p>
+                  )}
+                  {previewAvailable === false && (
+                    <p className="mt-2 text-sm text-amber-800">
+                      This address appears to be in use. The server will try the next available
+                      variation when you create the account.
+                    </p>
+                  )}
+                  <p className="mt-2 text-sm text-brand-gray">
+                    This will create a department email account through the secure email server.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField id="createRole" label="Role" required>
+                    <Select
+                      id="createRole"
+                      value={createForm.role}
+                      onChange={(event) =>
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          role: event.target.value as ManagedUserRole,
+                        }))
+                      }
+                    >
+                      {USER_ROLES.map((role) => (
+                        <option key={role} value={role}>
+                          {roleLabel(role)}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <FormField id="createStatus" label="Status" required>
+                    <Select
+                      id="createStatus"
+                      value={createForm.active ? "active" : "inactive"}
+                      onChange={(event) =>
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          active: event.target.value === "active",
+                        }))
+                      }
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </Select>
+                  </FormField>
+                </div>
+              </>
+            ) : (
+              <>
+                <FormField id="createAliasUsername" label="Alias address" required>
+                  <Select
+                    id="createAliasUsername"
+                    value={createForm.aliasUsername}
+                    onChange={(event) =>
+                      setCreateForm((prev) => ({ ...prev, aliasUsername: event.target.value }))
+                    }
+                  >
+                    {LEADERSHIP_ALIAS_USERNAMES.map((alias) => (
+                      <option key={alias} value={alias}>
+                        {alias}@{emailConfig?.domain ?? "domain"}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                <FormField id="createAliasDisplayName" label="Display name" required>
+                  <Input
+                    id="createAliasDisplayName"
+                    value={createForm.aliasDisplayName}
+                    onChange={(event) =>
+                      setCreateForm((prev) => ({ ...prev, aliasDisplayName: event.target.value }))
+                    }
+                    placeholder="Fire Chief"
+                    required
+                  />
+                </FormField>
+              </>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="createPassword" label="Temporary password" required>
                 <Input
-                  id="createTempPassword"
+                  id="createPassword"
                   type="password"
-                  value={createForm.temporaryPassword}
+                  value={createForm.password}
                   onChange={(event) =>
-                    setCreateForm((prev) => ({
-                      ...prev,
-                      temporaryPassword: event.target.value,
-                    }))
+                    setCreateForm((prev) => ({ ...prev, password: event.target.value }))
                   }
-                  minLength={8}
+                  autoComplete="new-password"
                   required
                 />
               </FormField>
-            )}
-
-            <div className="rounded-xl border border-brand-gray/15 bg-brand-charcoal/[0.02] p-4 sm:p-5">
-              <div className="flex items-start gap-3">
-                <input
-                  id="createDepartmentEmail"
-                  type="checkbox"
-                  checked={createForm.createDepartmentEmail}
-                  disabled={!emailConfig?.configured}
+              <FormField id="createConfirmPassword" label="Confirm password" required>
+                <Input
+                  id="createConfirmPassword"
+                  type="password"
+                  value={createForm.confirmPassword}
                   onChange={(event) =>
-                    setCreateForm((prev) => ({
-                      ...prev,
-                      createDepartmentEmail: event.target.checked,
-                      departmentEmailUsername: event.target.checked
-                        ? prev.departmentEmailUsername ||
-                          suggestDepartmentEmailUsername(prev.firstName, prev.lastName)
-                        : "",
-                    }))
+                    setCreateForm((prev) => ({ ...prev, confirmPassword: event.target.value }))
                   }
-                  className="mt-1 h-4 w-4 rounded border-brand-gray/30 text-brand-red focus:ring-brand-red/30"
+                  autoComplete="new-password"
+                  required
                 />
-                <div className="min-w-0 flex-1 space-y-4">
-                  <div>
-                    <label
-                      htmlFor="createDepartmentEmail"
-                      className="text-sm font-semibold text-brand-charcoal"
-                    >
-                      Create department email for this user
-                    </label>
-                    <p className="mt-1 text-sm text-brand-gray">
-                      This will create a department email account for the member through the
-                      secure email server.
-                    </p>
-                    {!emailConfig?.configured && (
-                      <p className="mt-2 text-sm text-amber-800">
-                        Department email provisioning is not configured on this server.
-                      </p>
-                    )}
-                  </div>
-
-                  {createForm.createDepartmentEmail && emailConfig?.configured && (
-                    <div className="space-y-4 border-t border-brand-gray/10 pt-4">
-                      <FormField
-                        id="createDepartmentEmailUsername"
-                        label="Email username"
-                        hint={
-                          emailConfig.domain
-                            ? `Address will be ${createForm.departmentEmailUsername || "username"}@${emailConfig.domain}`
-                            : undefined
-                        }
-                        required
-                      >
-                        <Input
-                          id="createDepartmentEmailUsername"
-                          value={createForm.departmentEmailUsername}
-                          onChange={(event) =>
-                            setCreateForm((prev) => ({
-                              ...prev,
-                              departmentEmailUsername: event.target.value.toLowerCase(),
-                            }))
-                          }
-                          autoComplete="off"
-                          required
-                        />
-                      </FormField>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <FormField
-                          id="createDepartmentEmailPassword"
-                          label="Temporary email password"
-                          required
-                        >
-                          <Input
-                            id="createDepartmentEmailPassword"
-                            type="password"
-                            value={createForm.departmentEmailPassword}
-                            onChange={(event) =>
-                              setCreateForm((prev) => ({
-                                ...prev,
-                                departmentEmailPassword: event.target.value,
-                              }))
-                            }
-                            autoComplete="new-password"
-                            required
-                          />
-                        </FormField>
-                        <FormField
-                          id="createDepartmentEmailPasswordConfirm"
-                          label="Confirm password"
-                          required
-                        >
-                          <Input
-                            id="createDepartmentEmailPasswordConfirm"
-                            type="password"
-                            value={createForm.departmentEmailPasswordConfirm}
-                            onChange={(event) =>
-                              setCreateForm((prev) => ({
-                                ...prev,
-                                departmentEmailPasswordConfirm: event.target.value,
-                              }))
-                            }
-                            autoComplete="new-password"
-                            required
-                          />
-                        </FormField>
-                      </div>
-                      <FormField id="createDepartmentEmailQuota" label="Mailbox quota" required>
-                        <Select
-                          id="createDepartmentEmailQuota"
-                          value={createForm.departmentEmailQuota}
-                          onChange={(event) =>
-                            setCreateForm((prev) => ({
-                              ...prev,
-                              departmentEmailQuota: Number(
-                                event.target.value
-                              ) as CreateUserFormState["departmentEmailQuota"],
-                            }))
-                          }
-                        >
-                          {(emailConfig?.quotaOptions ?? []).map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormField>
-                    </div>
-                  )}
-                </div>
-              </div>
+              </FormField>
             </div>
+
+            <FormField id="createQuota" label="Mailbox quota" required>
+              <Select
+                id="createQuota"
+                value={createForm.departmentEmailQuota}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    departmentEmailQuota: Number(
+                      event.target.value
+                    ) as CreateUserFormState["departmentEmailQuota"],
+                  }))
+                }
+              >
+                {(emailConfig?.quotaOptions ?? []).map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+
+            {!emailConfig?.configured && (
+              <AlertBanner variant="warning">
+                Department email provisioning is not configured on this server.
+              </AlertBanner>
+            )}
 
             {actionError && (
               <p className="text-sm font-medium text-brand-red" role="alert">
@@ -1036,7 +1035,7 @@ export function UserAccessManager() {
       {modalMode === "edit" && selectedUser && (
         <Modal
           title="Edit user"
-          description={selectedUser.email ?? undefined}
+          description={getDisplayDepartmentEmail(selectedUser) ?? undefined}
           onClose={closeModal}
           footer={
             <>
@@ -1050,6 +1049,43 @@ export function UserAccessManager() {
           }
         >
           <form id="edit-user-form" onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="rounded-xl border border-brand-gray/15 bg-brand-charcoal/[0.02] p-4 sm:p-5">
+              <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="font-medium text-brand-charcoal">Department email</dt>
+                  <dd className="mt-1 text-brand-gray">
+                    {getDisplayDepartmentEmail(selectedUser) ?? "Not provisioned"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-brand-charcoal">Email provisioning</dt>
+                  <dd className="mt-1">
+                    <StatusBadge
+                      label={emailStatusLabel(selectedUser.emailProvisioningStatus)}
+                      variant={emailStatusVariant(selectedUser.emailProvisioningStatus)}
+                    />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-brand-charcoal">Authentication</dt>
+                  <dd className="mt-1">
+                    <StatusBadge
+                      label={authStatusLabel(selectedUser.authProvisioningStatus, selectedUser)}
+                      variant={authStatusVariant(
+                        selectedUser.authProvisioningStatus,
+                        selectedUser
+                      )}
+                    />
+                  </dd>
+                </div>
+              </dl>
+              {selectedUser.authProvisioningError && (
+                <p className="mt-3 rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-sm text-amber-950">
+                  {selectedUser.authProvisioningError}
+                </p>
+              )}
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField id="editFirstName" label="First name" required>
                 <Input
@@ -1128,73 +1164,6 @@ export function UserAccessManager() {
                 />
               </FormField>
             </div>
-
-            <div className="rounded-xl border border-brand-gray/15 bg-brand-charcoal/[0.02] p-4 sm:p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-brand-charcoal">Department email</h3>
-                  <p className="mt-1 text-sm text-brand-gray">
-                    Manage the member&apos;s department mailbox on the secure email server.
-                  </p>
-                </div>
-                <StatusBadge
-                  label={emailStatusLabel(selectedUser.emailProvisioningStatus)}
-                  variant={emailStatusVariant(selectedUser.emailProvisioningStatus)}
-                />
-              </div>
-
-              <dl className="mt-4 space-y-2 text-sm">
-                <div className="flex flex-wrap gap-x-2">
-                  <dt className="font-medium text-brand-charcoal">Address:</dt>
-                  <dd className="text-brand-gray">
-                    {selectedUser.departmentEmail ?? "Not provisioned"}
-                  </dd>
-                </div>
-                {selectedUser.emailProvisioningStatus === "failed" &&
-                  selectedUser.emailProvisioningError && (
-                    <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-amber-950">
-                      {selectedUser.emailProvisioningError}
-                    </div>
-                  )}
-              </dl>
-
-              {emailConfig?.configured && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {(selectedUser.emailProvisioningStatus === "none" ||
-                    selectedUser.emailProvisioningStatus === "pending") && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openDepartmentEmailModal(selectedUser)}
-                    >
-                      Create email
-                    </Button>
-                  )}
-                  {selectedUser.emailProvisioningStatus === "failed" && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openDepartmentEmailModal(selectedUser)}
-                    >
-                      Retry email creation
-                    </Button>
-                  )}
-                  {selectedUser.emailProvisioningStatus === "provisioned" && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openDepartmentEmailResetModal(selectedUser)}
-                    >
-                      Reset email password
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-
             {actionError && (
               <p className="text-sm font-medium text-brand-red" role="alert">
                 {actionError}
@@ -1206,8 +1175,8 @@ export function UserAccessManager() {
 
       {modalMode === "reset" && selectedUser && (
         <Modal
-          title="Reset password"
-          description={selectedUser.email ?? undefined}
+          title="Reset portal password"
+          description={getDisplayDepartmentEmail(selectedUser) ?? undefined}
           onClose={closeModal}
           footer={
             <>
@@ -1262,108 +1231,49 @@ export function UserAccessManager() {
         </Modal>
       )}
 
-      {modalMode === "department-email" && selectedUser && (
+      {modalMode === "retry-auth" && selectedUser && (
         <Modal
-          title={
-            selectedUser.emailProvisioningStatus === "failed"
-              ? "Retry email creation"
-              : "Create department email"
-          }
-          description={selectedUser.displayName ?? selectedUser.email ?? undefined}
+          title="Retry portal setup"
+          description={getDisplayDepartmentEmail(selectedUser) ?? undefined}
           onClose={closeModal}
           footer={
             <>
               <Button type="button" variant="ghost" onClick={closeModal} disabled={saving}>
                 Cancel
               </Button>
-              <Button type="submit" form="department-email-form" disabled={saving}>
-                {saving ? "Working…" : "Create email"}
+              <Button type="submit" form="retry-auth-form" disabled={saving}>
+                {saving ? "Working…" : "Complete portal setup"}
               </Button>
             </>
           }
         >
-          <form
-            id="department-email-form"
-            onSubmit={handleDepartmentEmailSubmit}
-            className="space-y-4"
-          >
-            <FormField
-              id="departmentEmailUsername"
-              label="Email username"
-              hint={
-                emailConfig?.domain
-                  ? `Address will be ${departmentEmailForm.emailUsername || "username"}@${emailConfig.domain}`
-                  : undefined
-              }
-              required
-            >
+          <form id="retry-auth-form" onSubmit={handleRetryAuthSubmit} className="space-y-4">
+            <p className="text-sm text-brand-gray">
+              The department mailbox already exists. Set a portal password to finish creating the
+              login account.
+            </p>
+            <FormField id="retryPassword" label="Portal password" required>
               <Input
-                id="departmentEmailUsername"
-                value={departmentEmailForm.emailUsername}
+                id="retryPassword"
+                type="password"
+                value={retryAuthForm.password}
                 onChange={(event) =>
-                  setDepartmentEmailForm((prev) => ({
-                    ...prev,
-                    emailUsername: event.target.value.toLowerCase(),
-                  }))
+                  setRetryAuthForm((prev) => ({ ...prev, password: event.target.value }))
                 }
-                autoComplete="off"
                 required
               />
             </FormField>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField id="departmentEmailPassword" label="Temporary email password" required>
-                <Input
-                  id="departmentEmailPassword"
-                  type="password"
-                  value={departmentEmailForm.password}
-                  onChange={(event) =>
-                    setDepartmentEmailForm((prev) => ({
-                      ...prev,
-                      password: event.target.value,
-                    }))
-                  }
-                  autoComplete="new-password"
-                  required
-                />
-              </FormField>
-              <FormField id="departmentEmailConfirmPassword" label="Confirm password" required>
-                <Input
-                  id="departmentEmailConfirmPassword"
-                  type="password"
-                  value={departmentEmailForm.confirmPassword}
-                  onChange={(event) =>
-                    setDepartmentEmailForm((prev) => ({
-                      ...prev,
-                      confirmPassword: event.target.value,
-                    }))
-                  }
-                  autoComplete="new-password"
-                  required
-                />
-              </FormField>
-            </div>
-            <FormField id="departmentEmailQuota" label="Mailbox quota" required>
-              <Select
-                id="departmentEmailQuota"
-                value={departmentEmailForm.quotaMb}
+            <FormField id="retryConfirmPassword" label="Confirm password" required>
+              <Input
+                id="retryConfirmPassword"
+                type="password"
+                value={retryAuthForm.confirmPassword}
                 onChange={(event) =>
-                  setDepartmentEmailForm((prev) => ({
-                    ...prev,
-                    quotaMb: Number(event.target.value) as 1024 | 2048 | 5120 | 0,
-                  }))
+                  setRetryAuthForm((prev) => ({ ...prev, confirmPassword: event.target.value }))
                 }
-              >
-                {(emailConfig?.quotaOptions ?? []).map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
+                required
+              />
             </FormField>
-            <p className="text-sm text-brand-gray">
-              This will create a department email account for the member through the secure
-              email server.
-            </p>
             {actionError && (
               <p className="text-sm font-medium text-brand-red" role="alert">
                 {actionError}
@@ -1373,54 +1283,42 @@ export function UserAccessManager() {
         </Modal>
       )}
 
-      {modalMode === "department-email-reset" && selectedUser && (
+      {modalMode === "email-reset" && selectedUser && (
         <Modal
           title="Reset email password"
-          description={selectedUser.departmentEmail ?? undefined}
+          description={getDisplayDepartmentEmail(selectedUser) ?? undefined}
           onClose={closeModal}
           footer={
             <>
               <Button type="button" variant="ghost" onClick={closeModal} disabled={saving}>
                 Cancel
               </Button>
-              <Button type="submit" form="department-email-reset-form" disabled={saving}>
+              <Button type="submit" form="email-reset-form" disabled={saving}>
                 {saving ? "Working…" : "Reset email password"}
               </Button>
             </>
           }
         >
-          <form
-            id="department-email-reset-form"
-            onSubmit={handleDepartmentEmailResetSubmit}
-            className="space-y-4"
-          >
-            <FormField id="resetDepartmentEmailPassword" label="New email password" required>
+          <form id="email-reset-form" onSubmit={handleEmailResetSubmit} className="space-y-4">
+            <FormField id="emailResetPassword" label="New email password" required>
               <Input
-                id="resetDepartmentEmailPassword"
+                id="emailResetPassword"
                 type="password"
-                value={departmentEmailForm.password}
+                value={emailResetForm.password}
                 onChange={(event) =>
-                  setDepartmentEmailForm((prev) => ({
-                    ...prev,
-                    password: event.target.value,
-                  }))
+                  setEmailResetForm((prev) => ({ ...prev, password: event.target.value }))
                 }
-                autoComplete="new-password"
                 required
               />
             </FormField>
-            <FormField id="resetDepartmentEmailConfirmPassword" label="Confirm password" required>
+            <FormField id="emailResetConfirmPassword" label="Confirm password" required>
               <Input
-                id="resetDepartmentEmailConfirmPassword"
+                id="emailResetConfirmPassword"
                 type="password"
-                value={departmentEmailForm.confirmPassword}
+                value={emailResetForm.confirmPassword}
                 onChange={(event) =>
-                  setDepartmentEmailForm((prev) => ({
-                    ...prev,
-                    confirmPassword: event.target.value,
-                  }))
+                  setEmailResetForm((prev) => ({ ...prev, confirmPassword: event.target.value }))
                 }
-                autoComplete="new-password"
                 required
               />
             </FormField>
@@ -1436,7 +1334,7 @@ export function UserAccessManager() {
       {modalMode === "disable" && selectedUser && (
         <Modal
           title="Disable user"
-          description={`Disable ${selectedUser.displayName ?? selectedUser.email ?? "this user"}? They will not be able to sign in, but their records will be kept.`}
+          description={`Disable ${selectedUser.displayName ?? getDisplayDepartmentEmail(selectedUser) ?? "this user"}? They will not be able to sign in, but their records will be kept.`}
           onClose={closeModal}
           footer={
             <>
@@ -1460,7 +1358,7 @@ export function UserAccessManager() {
       {modalMode === "delete" && selectedUser && (
         <Modal
           title="Permanently delete user"
-          description="This removes the authentication account and profile. Prefer disabling users when possible."
+          description="This removes the authentication account and profile when applicable. Prefer disabling users when possible."
           onClose={closeModal}
           footer={
             <>
@@ -1476,7 +1374,7 @@ export function UserAccessManager() {
           <p className="text-sm text-brand-gray">
             You are about to permanently delete{" "}
             <strong className="text-brand-charcoal">
-              {selectedUser.displayName ?? selectedUser.email}
+              {selectedUser.displayName ?? getDisplayDepartmentEmail(selectedUser)}
             </strong>
             . This cannot be undone.
           </p>

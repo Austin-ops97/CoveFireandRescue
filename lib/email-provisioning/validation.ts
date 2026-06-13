@@ -1,32 +1,26 @@
+import {
+  DEPARTMENT_EMAIL_USERNAME_PATTERN,
+  LEADERSHIP_ALIAS_USERNAMES,
+  buildMemberEmailUsernameCandidates,
+  normalizeNamePart,
+} from "@/lib/email-provisioning/usernames";
 import { normalizeOptionalString } from "@/lib/users/validation";
 
-export const DEPARTMENT_EMAIL_USERNAME_PATTERN = /^[a-z0-9._-]+$/;
+export {
+  DEPARTMENT_EMAIL_USERNAME_PATTERN,
+  LEADERSHIP_ALIAS_USERNAMES,
+  buildDepartmentEmailAddress,
+  buildMemberEmailUsernameCandidates,
+  suggestDepartmentEmailUsername,
+} from "@/lib/email-provisioning/usernames";
 
 export const DEPARTMENT_EMAIL_QUOTA_OPTIONS = [1024, 2048, 5120, 0] as const;
 
 export type DepartmentEmailQuotaMb = (typeof DEPARTMENT_EMAIL_QUOTA_OPTIONS)[number];
 
-const MIN_EMAIL_PASSWORD_LENGTH = 8;
+export type CreateAccountType = "member" | "alias";
 
-export function suggestDepartmentEmailUsername(
-  firstName: string,
-  lastName: string
-): string {
-  const normalizePart = (value: string) =>
-    value
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "")
-      .slice(0, 32);
-
-  const first = normalizePart(firstName);
-  const last = normalizePart(lastName);
-
-  if (first && last) return `${first}.${last}`;
-  if (first) return first;
-  if (last) return last;
-  return "";
-}
+const MIN_PASSWORD_LENGTH = 8;
 
 export function validateDepartmentEmailUsername(value: unknown): string | Error {
   if (typeof value !== "string" || !value.trim()) {
@@ -36,22 +30,31 @@ export function validateDepartmentEmailUsername(value: unknown): string | Error 
   const username = value.trim().toLowerCase();
   if (!DEPARTMENT_EMAIL_USERNAME_PATTERN.test(username)) {
     return new Error(
-      "Email username may only contain lowercase letters, numbers, dots, hyphens, and underscores."
+      "Email username may only contain lowercase letters, numbers, underscores, and hyphens."
     );
   }
 
-  if (username.startsWith(".") || username.endsWith(".") || username.includes("..")) {
-    return new Error("Email username cannot start or end with a dot.");
+  if (username.startsWith("_") || username.endsWith("_")) {
+    return new Error("Email username cannot start or end with an underscore.");
   }
 
   return username;
 }
 
-export function validateStrongEmailPassword(value: unknown): string | Error {
-  if (typeof value !== "string" || value.length < MIN_EMAIL_PASSWORD_LENGTH) {
-    return new Error(
-      `Email password must be at least ${MIN_EMAIL_PASSWORD_LENGTH} characters.`
-    );
+export function validateAliasEmailUsername(value: unknown): string | Error {
+  const username = validateDepartmentEmailUsername(value);
+  if (username instanceof Error) return username;
+
+  if (!LEADERSHIP_ALIAS_USERNAMES.includes(username as (typeof LEADERSHIP_ALIAS_USERNAMES)[number])) {
+    return new Error("Select a supported department alias address.");
+  }
+
+  return username;
+}
+
+export function validateStrongPassword(value: unknown): string | Error {
+  if (typeof value !== "string" || value.length < MIN_PASSWORD_LENGTH) {
+    return new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
   }
 
   const hasLower = /[a-z]/.test(value);
@@ -61,7 +64,7 @@ export function validateStrongEmailPassword(value: unknown): string | Error {
 
   if (!hasLower || !hasUpper || !hasNumber || !hasSpecial) {
     return new Error(
-      "Email password must include uppercase, lowercase, a number, and a special character."
+      "Password must include uppercase, lowercase, a number, and a special character."
     );
   }
 
@@ -102,7 +105,7 @@ export function parseDepartmentEmailBody(
   const emailUsername = validateDepartmentEmailUsername(body.emailUsername);
   if (emailUsername instanceof Error) return emailUsername;
 
-  const password = validateStrongEmailPassword(body.password);
+  const password = validateStrongPassword(body.password);
   if (password instanceof Error) return password;
 
   const confirmPassword =
@@ -122,58 +125,109 @@ export function parseDepartmentEmailBody(
   };
 }
 
-export type CreateUserDepartmentEmailInput = {
-  enabled: boolean;
-  emailUsername: string | null;
-  password: string | null;
-  confirmPassword: string | null;
-  quotaMb: DepartmentEmailQuotaMb | null;
+export type CreateMemberUserInput = {
+  accountType: "member";
+  firstName: string;
+  lastName: string;
+  role: import("@/lib/auth/roles").UserRole;
+  active: boolean;
+  departmentEmailUsername: string;
+  password: string;
+  confirmPassword: string;
+  quotaMb: DepartmentEmailQuotaMb;
 };
 
-export function parseCreateUserDepartmentEmail(
+export type CreateAliasUserInput = {
+  accountType: "alias";
+  aliasUsername: string;
+  displayName: string;
+  password: string;
+  confirmPassword: string;
+  quotaMb: DepartmentEmailQuotaMb;
+};
+
+export type CreatePortalUserInput = CreateMemberUserInput | CreateAliasUserInput;
+
+export function parseCreatePortalUserBody(
   body: Record<string, unknown>,
   supportsUnlimited: boolean
-): CreateUserDepartmentEmailInput | Error {
-  const enabled = body.createDepartmentEmail === true;
-  if (!enabled) {
+): CreatePortalUserInput | Error {
+  const accountType = body.accountType === "alias" ? "alias" : "member";
+
+  const password = validateStrongPassword(body.password);
+  if (password instanceof Error) return password;
+
+  const confirmPassword = typeof body.confirmPassword === "string" ? body.confirmPassword : "";
+  if (password !== confirmPassword) {
+    return new Error("Password and confirm password must match.");
+  }
+
+  const quotaMb = validateDepartmentEmailQuota(body.quotaMb, supportsUnlimited);
+  if (quotaMb instanceof Error) return quotaMb;
+
+  if (accountType === "alias") {
+    const aliasUsername = validateAliasEmailUsername(body.aliasUsername);
+    if (aliasUsername instanceof Error) return aliasUsername;
+
+    const displayName = normalizeOptionalString(body.displayName);
+    if (!displayName) {
+      return new Error("Display name is required for department alias accounts.");
+    }
+
     return {
-      enabled: false,
-      emailUsername: null,
-      password: null,
-      confirmPassword: null,
-      quotaMb: null,
+      accountType: "alias",
+      aliasUsername,
+      displayName,
+      password,
+      confirmPassword,
+      quotaMb,
     };
   }
 
-  const emailUsername = validateDepartmentEmailUsername(body.departmentEmailUsername);
-  if (emailUsername instanceof Error) return emailUsername;
+  const firstName = normalizeOptionalString(body.firstName);
+  if (!firstName) return new Error("First name is required.");
 
-  const password = validateStrongEmailPassword(body.departmentEmailPassword);
-  if (password instanceof Error) return password;
+  const lastName = normalizeOptionalString(body.lastName);
+  if (!lastName) return new Error("Last name is required.");
 
-  const confirmPassword =
-    typeof body.departmentEmailPasswordConfirm === "string"
-      ? body.departmentEmailPasswordConfirm
-      : "";
-  if (password !== confirmPassword) {
-    return new Error("Department email password and confirm password must match.");
+  const departmentEmailUsername = validateDepartmentEmailUsername(
+    body.departmentEmailUsername
+  );
+  if (departmentEmailUsername instanceof Error) return departmentEmailUsername;
+
+  const role = body.role;
+  if (role !== "admin" && role !== "editor" && role !== "viewer" && role !== "member") {
+    return new Error("Invalid role.");
   }
 
-  const quotaMb = validateDepartmentEmailQuota(body.departmentEmailQuota, supportsUnlimited);
-  if (quotaMb instanceof Error) return quotaMb;
+  if (typeof body.active !== "boolean") {
+    return new Error("Status must be active or inactive.");
+  }
+
+  const normalizedFirst = normalizeNamePart(firstName);
+  const normalizedLast = normalizeNamePart(lastName);
+  if (!normalizedFirst || !normalizedLast) {
+    return new Error("First and last name must contain valid letters.");
+  }
 
   return {
-    enabled: true,
-    emailUsername,
+    accountType: "member",
+    firstName,
+    lastName,
+    role,
+    active: body.active,
+    departmentEmailUsername,
     password,
     confirmPassword,
     quotaMb,
   };
 }
 
-export function normalizeDepartmentEmailUsername(value: unknown): string | null {
-  const normalized = normalizeOptionalString(value);
-  if (!normalized) return null;
-  const validated = validateDepartmentEmailUsername(normalized);
-  return validated instanceof Error ? null : validated;
+export function usernameSupportsAutoResolve(
+  firstName: string,
+  lastName: string,
+  username: string
+): boolean {
+  const candidates = buildMemberEmailUsernameCandidates(firstName, lastName);
+  return candidates.includes(username);
 }

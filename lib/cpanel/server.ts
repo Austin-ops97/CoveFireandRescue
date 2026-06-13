@@ -199,6 +199,34 @@ export async function cpanelSupportsUnlimitedQuota(): Promise<boolean> {
   return true;
 }
 
+export async function cpanelEmailAccountExists(emailUsername: string): Promise<boolean> {
+  const config = getCpanelEnvConfig();
+
+  try {
+    const response = await cpanelUapiCall("Email", "list_pops", {
+      domain: config.emailDomain,
+    });
+    const data = response.data;
+    if (!Array.isArray(data)) return false;
+
+    const target = `${emailUsername}@${config.emailDomain}`.toLowerCase();
+    return data.some((entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      const record = entry as { email?: unknown; login?: unknown };
+      const email =
+        typeof record.email === "string"
+          ? record.email.toLowerCase()
+          : typeof record.login === "string"
+            ? record.login.toLowerCase()
+            : "";
+      return email === target || email === emailUsername.toLowerCase();
+    });
+  } catch (error) {
+    console.warn("Could not verify email account existence in cPanel:", error);
+    return false;
+  }
+}
+
 export function buildDepartmentEmailAddress(emailUsername: string): string {
   const config = getCpanelEnvConfig();
   return `${emailUsername}@${config.emailDomain}`;
