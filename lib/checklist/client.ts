@@ -134,6 +134,7 @@ export type ChecklistSubmissionQuery = {
   toDate?: string;
   search?: string;
   attentionOnly?: boolean;
+  deletedOnly?: boolean;
 };
 
 export async function fetchChecklistSubmissions(
@@ -148,6 +149,7 @@ export async function fetchChecklistSubmissions(
   if (query.toDate) params.set("toDate", query.toDate);
   if (query.search) params.set("search", query.search);
   if (query.attentionOnly) params.set("attentionOnly", "true");
+  if (query.deletedOnly) params.set("deletedOnly", "true");
 
   const qs = params.toString();
   const response = await authenticatedFetch(
@@ -160,4 +162,46 @@ export async function fetchChecklistSubmissions(
 
   const data = (await response.json()) as { submissions?: ChecklistSubmissionRecord[] };
   return Array.isArray(data.submissions) ? data.submissions : [];
+}
+
+export async function deleteChecklistSubmission(id: string): Promise<void> {
+  const response = await authenticatedFetch(
+    `/api/checklist-submissions/${encodeURIComponent(id)}`,
+    { method: "DELETE" }
+  );
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+}
+
+export async function restoreChecklistSubmission(
+  id: string
+): Promise<ChecklistSubmissionRecord> {
+  const response = await authenticatedFetch(
+    `/api/checklist-submissions/${encodeURIComponent(id)}/restore`,
+    { method: "POST" }
+  );
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+
+  const data = (await response.json()) as { submission?: ChecklistSubmissionRecord };
+  if (!data.submission) {
+    throw new Error("Server did not return the restored submission.");
+  }
+
+  return data.submission;
+}
+
+export async function purgeChecklistSubmission(id: string): Promise<void> {
+  const response = await authenticatedFetch(
+    `/api/checklist-submissions/${encodeURIComponent(id)}/purge`,
+    { method: "DELETE" }
+  );
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
 }

@@ -85,7 +85,9 @@ async function buildAdminSummary(): Promise<DashboardSummaryAdmin> {
 
   const templateMap = buildTemplateMap(templateSnapshot.docs);
   const submissions = sortSubmissionsNewestFirst(
-    submissionSnapshot.docs.map((doc) => serializeChecklistSubmissionDoc(doc))
+    submissionSnapshot.docs
+      .map((doc) => serializeChecklistSubmissionDoc(doc))
+      .filter((item) => !item.isDeleted)
   );
 
   const recentCutoff = Date.now() - RECENT_DAYS_MS;
@@ -139,7 +141,7 @@ async function buildMemberSummary(user: VerifiedServerUser): Promise<DashboardSu
   const mySubmissions = sortSubmissionsNewestFirst(
     submissionSnapshot.docs
       .map((doc) => serializeChecklistSubmissionDoc(doc))
-      .filter((item) => item.submittedBy === user.uid)
+      .filter((item) => item.submittedBy === user.uid && !item.isDeleted)
   );
 
   const recentCutoff = Date.now() - RECENT_DAYS_MS;

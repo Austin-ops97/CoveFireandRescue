@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/site/Button";
 import { useAuth } from "@/hooks/useAuth";
 import { canAccessDashboard } from "@/lib/auth/roles";
@@ -10,12 +10,37 @@ import {
   getVisibleDashboardNavItems,
   isDashboardNavItemActive,
 } from "@/lib/config/dashboard-modules";
+import { fetchUnreadNotificationCount } from "@/lib/notifications/client";
 
 export function DashboardNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, profile, role, loading, signOutUser } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  useEffect(() => {
+    if (role !== "admin") return;
+
+    let cancelled = false;
+
+    async function loadUnreadCount() {
+      try {
+        const count = await fetchUnreadNotificationCount();
+        if (!cancelled) setUnreadNotifications(count);
+      } catch {
+        if (!cancelled) setUnreadNotifications(0);
+      }
+    }
+
+    void loadUnreadCount();
+    const interval = window.setInterval(() => void loadUnreadCount(), 60_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [role]);
 
   if (!user || (!loading && !canAccessDashboard(role))) {
     return null;
@@ -84,6 +109,9 @@ export function DashboardNav() {
           <div className="flex flex-wrap gap-2 max-md:flex-nowrap max-md:overflow-x-auto max-md:pb-1 max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden">
             {navItems.map((item) => {
               const active = isDashboardNavItemActive(pathname, item);
+              const showBadge =
+                item.href === "/dashboard/rounds/notifications" && unreadNotifications > 0;
+
               return (
                 <Link
                   key={item.href}
@@ -92,6 +120,11 @@ export function DashboardNav() {
                   aria-current={active ? "page" : undefined}
                 >
                   {item.label}
+                  {showBadge && (
+                    <span className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-red px-1.5 py-0.5 text-xs font-bold text-white">
+                      {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                    </span>
+                  )}
                 </Link>
               );
             })}

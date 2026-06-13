@@ -62,6 +62,28 @@ export type ChecklistSubmissionRecord = {
   answers: ChecklistSubmissionAnswer[];
   photoFileIds: string[];
   submittedAt?: unknown;
+  isDeleted?: boolean;
+  deletedAt?: unknown | null;
+  deletedBy?: string | null;
+};
+
+export type ChecklistNotificationStatus = "unread" | "acknowledged" | "submission_deleted";
+
+export type ChecklistNotificationRecord = {
+  id: string;
+  submissionId: string;
+  templateId: string;
+  templateName: string;
+  scope: ChecklistTemplateScope;
+  relatedFleetUnitName?: string | null;
+  submittedBy: string;
+  submittedByName?: string | null;
+  hasAttention: boolean;
+  status: ChecklistNotificationStatus;
+  createdAt?: unknown;
+  acknowledgedAt?: unknown | null;
+  acknowledgedBy?: string | null;
+  acknowledgedByName?: string | null;
 };
 
 export type ChecklistTemplateFormState = {

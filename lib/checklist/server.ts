@@ -216,6 +216,9 @@ export function serializeChecklistSubmissionDoc(
     answers: readAnswers(data.answers),
     photoFileIds: readStringArray(data.photoFileIds),
     submittedAt: serializeTimestamp(data.submittedAt),
+    isDeleted: data.isDeleted === true,
+    deletedAt: data.deletedAt ? serializeTimestamp(data.deletedAt) : data.deletedAt === null ? null : undefined,
+    deletedBy: typeof data.deletedBy === "string" ? data.deletedBy : data.deletedBy === null ? null : undefined,
   };
 }
 
@@ -753,6 +756,8 @@ export type SubmissionFilterParams = {
   toDate?: string;
   search?: string;
   attentionOnly?: boolean;
+  deletedOnly?: boolean;
+  includeDeleted?: boolean;
 };
 
 export function filterSubmissions(
@@ -765,6 +770,14 @@ export function filterSubmissions(
   const toMs = filters.toDate ? Date.parse(filters.toDate) : null;
 
   return submissions.filter((submission) => {
+    const isDeleted = submission.isDeleted === true;
+
+    if (filters.deletedOnly) {
+      if (!isDeleted) return false;
+    } else if (!filters.includeDeleted && isDeleted) {
+      return false;
+    }
+
     if (filters.templateId && submission.templateId !== filters.templateId) return false;
     if (filters.scope && submission.scope !== filters.scope) return false;
     if (

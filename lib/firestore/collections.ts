@@ -8,6 +8,7 @@ export const COLLECTIONS = {
   leadership: "leadership",
   checklistTemplates: "checklistTemplates",
   checklistSubmissions: "checklistSubmissions",
+  checklistNotifications: "checklistNotifications",
   files: "files",
   trainingRecords: "trainingRecords",
   equipment: "equipment",
@@ -41,6 +42,9 @@ export const checklistTemplateDocPath = (id: string): string =>
 
 export const checklistSubmissionDocPath = (id: string): string =>
   `${COLLECTIONS.checklistSubmissions}/${id}`;
+
+export const checklistNotificationDocPath = (id: string): string =>
+  `${COLLECTIONS.checklistNotifications}/${id}`;
 
 export const fileDocPath = (id: string): string => `${COLLECTIONS.files}/${id}`;
 

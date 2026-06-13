@@ -15,11 +15,13 @@ import { ReviewDashboardWidgets } from "@/components/dashboard/checklist/ReviewD
 import { FleetUnitReference } from "@/components/dashboard/checklist/FleetUnitReference";
 import { PhotoGallery } from "@/components/dashboard/checklist/PhotoGallery";
 import { SubmissionDetailModal } from "@/components/dashboard/checklist/SubmissionDetailModal";
+import { DeleteSubmissionModal } from "@/components/dashboard/checklist/DeleteSubmissionModal";
 import { useAuth } from "@/hooks/useAuth";
 import {
   fetchActiveChecklistTemplates,
   fetchAdminChecklistTemplates,
   fetchChecklistSubmissions,
+  deleteChecklistSubmission,
 } from "@/lib/checklist/client";
 import {
   getQuickFilterDates,
@@ -83,6 +85,9 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
   const [selectedSubmission, setSelectedSubmission] = useState<ChecklistSubmissionRecord | null>(
     null
   );
+  const [deleteTarget, setDeleteTarget] = useState<ChecklistSubmissionRecord | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
 
   const [templateId, setTemplateId] = useState("");
@@ -242,6 +247,28 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
     setToDate(dates.toDate);
   }
 
+  async function handleDeleteSubmission() {
+    if (!deleteTarget) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteChecklistSubmission(deleteTarget.id);
+      setSubmissions((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+      if (selectedSubmission?.id === deleteTarget.id) {
+        setSelectedSubmission(null);
+      }
+      setDeleteTarget(null);
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : "Failed to delete submission."
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="space-y-6 overflow-x-hidden">
       <p className="text-sm">
@@ -267,6 +294,27 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
               className="font-medium text-brand-red hover:underline"
             >
               Templates
+            </Link>
+            {" · "}
+            <Link
+              href="/dashboard/rounds/notifications"
+              className="font-medium text-brand-red hover:underline"
+            >
+              Notifications
+            </Link>
+            {" · "}
+            <Link
+              href="/dashboard/rounds/trash"
+              className="font-medium text-brand-red hover:underline"
+            >
+              Trash
+            </Link>
+            {" · "}
+            <Link
+              href="/dashboard/rounds/audit"
+              className="font-medium text-brand-red hover:underline"
+            >
+              Audit log
             </Link>
           </>
         )}
@@ -432,6 +480,12 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
         </Button>
       </Card>
 
+      {deleteError && (
+        <AlertBanner variant="error" title="Delete failed">
+          {deleteError}
+        </AlertBanner>
+      )}
+
       {loading && <SkeletonCardList count={4} />}
 
       {loadError && (
@@ -504,14 +558,27 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
                     </div>
                   )}
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedSubmission(submission)}
-                >
-                  View details
-                </Button>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedSubmission(submission)}
+                  >
+                    View details
+                  </Button>
+                  {isAdmin && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="border-red-200 text-red-700 hover:bg-red-50"
+                      onClick={() => setDeleteTarget(submission)}
+                    >
+                      Delete
+                    </Button>
+                  )}
+                </div>
               </div>
             </Card>
           );
@@ -525,6 +592,14 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
           fleetUnitsById={fleetUnitsById}
           isAdmin={isAdmin}
           onClose={() => setSelectedSubmission(null)}
+        />
+      )}
+
+      {deleteTarget && (
+        <DeleteSubmissionModal
+          onConfirm={() => void handleDeleteSubmission()}
+          onClose={() => setDeleteTarget(null)}
+          deleting={deleting}
         />
       )}
     </div>

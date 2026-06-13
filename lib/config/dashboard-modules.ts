@@ -54,6 +54,27 @@ export const dashboardModuleGroups: ModuleGroup[] = [
         href: "/dashboard/checklist-templates",
         status: "admin_only",
       },
+      {
+        title: "Checklist Notifications",
+        navLabel: "Notifications",
+        description: "Review and acknowledge new checklist submission alerts.",
+        href: "/dashboard/rounds/notifications",
+        status: "admin_only",
+      },
+      {
+        title: "Submission Trash",
+        navLabel: "Trash",
+        description: "Restore or permanently delete soft-deleted submissions.",
+        href: "/dashboard/rounds/trash",
+        status: "admin_only",
+      },
+      {
+        title: "Checklist Audit Log",
+        navLabel: "Audit log",
+        description: "Accountability history for submissions and notifications.",
+        href: "/dashboard/rounds/audit",
+        status: "admin_only",
+      },
     ],
   },
   {

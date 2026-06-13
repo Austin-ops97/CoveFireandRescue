@@ -28,6 +28,11 @@ const ADMIN_QUICK_ACTIONS: QuickAction[] = [
     href: "/dashboard/rounds/review",
   },
   {
+    title: "Checklist notifications",
+    description: "Acknowledge new submission alerts.",
+    href: "/dashboard/rounds/notifications",
+  },
+  {
     title: "Manage checklist templates",
     description: "Build and update reusable inspection sheets.",
     href: "/dashboard/checklist-templates",

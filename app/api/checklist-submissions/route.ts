@@ -11,6 +11,9 @@ import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firestore/collections";
 import { serializeFleetDoc } from "@/lib/fleet/server";
 import {
+  createSubmissionNotification,
+} from "@/lib/notifications/server";
+import {
   ChecklistValidationError,
   filterSubmissions,
   serializeChecklistSubmissionDoc,
@@ -100,6 +103,12 @@ export async function GET(request: Request) {
         ? (scopeParam as ChecklistTemplateScope)
         : undefined;
 
+    const deletedOnly = searchParams.get("deletedOnly") === "true";
+
+    if (deletedOnly && user.role !== "admin") {
+      throw new ServerAuthError(403, "insufficient_role", "Insufficient permissions.");
+    }
+
     const filters = {
       templateId: searchParams.get("templateId")?.trim() || undefined,
       scope,
@@ -112,6 +121,7 @@ export async function GET(request: Request) {
       toDate: searchParams.get("toDate")?.trim() || undefined,
       search: searchParams.get("search")?.trim() || undefined,
       attentionOnly: searchParams.get("attentionOnly") === "true",
+      deletedOnly,
     };
 
     submissions = filterSubmissions(submissions, filters).slice(0, 200);
@@ -177,6 +187,7 @@ export async function POST(request: Request) {
       answers: stripUndefinedDeep(validated.answers),
       photoFileIds: validated.photoFileIds,
       submittedAt: FieldValue.serverTimestamp(),
+      isDeleted: false,
     };
 
     await docRef.set(writeData);
@@ -191,6 +202,8 @@ export async function POST(request: Request) {
       targetId: saved.id,
       message: `Submitted checklist "${template.name}"${relatedFleetUnitName ? ` for ${relatedFleetUnitName}` : ""}`,
     });
+
+    await createSubmissionNotification(saved, template);
 
     return NextResponse.json({ submission: saved }, { status: 201 });
   } catch (error) {

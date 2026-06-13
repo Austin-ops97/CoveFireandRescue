@@ -63,6 +63,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /checklistNotifications/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     match /files/{id} {
       allow read: if isActiveMember();
       allow write: if false;
