@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/audit/server";
 import {
   FleetValidationError,
+  attachFleetPrimaryImageUrls,
   serializeFleetDoc,
   sortFleetForAdmin,
   validateFleetPayload,
@@ -45,8 +46,9 @@ export async function GET(request: Request) {
     const snapshot = await adminDb.collection(COLLECTIONS.fleet).limit(100).get();
 
     const fleet = sortFleetForAdmin(snapshot.docs.map((doc) => serializeFleetDoc(doc)));
+    const withImages = await attachFleetPrimaryImageUrls(fleet);
 
-    return NextResponse.json({ fleet });
+    return NextResponse.json({ fleet: withImages });
   } catch (error) {
     return serverAuthErrorResponse(error);
   }

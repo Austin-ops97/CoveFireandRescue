@@ -7,6 +7,7 @@ export { CollapsibleSection } from "./CollapsibleSection";
 export { MobileActionBar } from "./MobileActionBar";
 export { MobileDrawer } from "./MobileDrawer";
 export { MobileFilterPanel } from "./MobileFilterPanel";
+export { ManagerPhotoUpload, type ManagerPhotoItem } from "./ManagerPhotoUpload";
 export { Modal } from "./Modal";
 export {
   SkeletonCard,

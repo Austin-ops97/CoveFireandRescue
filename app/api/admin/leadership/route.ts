@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/audit/server";
 import {
   LeadershipValidationError,
+  attachLeadershipPhotoUrls,
   serializeLeadershipDoc,
   sortLeadershipForAdmin,
   validateLeadershipPayload,
@@ -47,8 +48,9 @@ export async function GET(request: Request) {
     const leadership = sortLeadershipForAdmin(
       snapshot.docs.map((doc) => serializeLeadershipDoc(doc))
     );
+    const withPhotos = await attachLeadershipPhotoUrls(leadership);
 
-    return NextResponse.json({ leadership });
+    return NextResponse.json({ leadership: withPhotos });
   } catch (error) {
     return serverAuthErrorResponse(error);
   }

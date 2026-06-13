@@ -9,6 +9,7 @@ import {
   EmptyState,
   InfoBanner,
   ListToolbar,
+  ManagerPhotoUpload,
   SkeletonCardList,
   StatusBadge,
 } from "@/components/ui";
@@ -150,14 +151,16 @@ export function LeadershipManager() {
     setSaveError(null);
     setUploadError(null);
     setSuccessMessage(null);
-    void loadPhotoPreview(record.photoFileId ?? "");
+    if (record.photoUrl) {
+      setPhotoPreviewUrl(record.photoUrl);
+    } else if (record.photoFileId) {
+      void loadPhotoPreview(record.photoFileId);
+    } else {
+      setPhotoPreviewUrl(null);
+    }
   }
 
-  async function handlePhotoUpload(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
+  async function handlePhotoUpload(file: File) {
     const memberId = editingId ?? form.id;
     if (!memberId) {
       setUploadError("Save the leadership record first before uploading a photo.");
@@ -198,6 +201,39 @@ export function LeadershipManager() {
       );
     } finally {
       setUploadingPhoto(false);
+    }
+  }
+
+  async function handleRemovePhoto() {
+    const memberId = editingId ?? form.id;
+    if (!memberId || !form.photoFileId) return;
+
+    const previousPhotoFileId = form.photoFileId;
+    setForm((prev) => ({ ...prev, photoFileId: "" }));
+    setPhotoPreviewUrl(null);
+    setUploadError(null);
+    setSaveError(null);
+
+    try {
+      await saveLeadershipMember({
+        ...form,
+        id: memberId,
+        name: form.name.trim(),
+        rank: form.rank.trim(),
+        title: form.title.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        bio: form.bio,
+        photoFileId: "",
+      });
+      await loadLeadership(true);
+      setSuccessMessage("Leadership photo removed.");
+    } catch (error) {
+      setForm((prev) => ({ ...prev, photoFileId: previousPhotoFileId }));
+      void loadPhotoPreview(previousPhotoFileId);
+      setSaveError(
+        error instanceof Error ? error.message : "Failed to remove leadership photo."
+      );
     }
   }
 
@@ -450,47 +486,23 @@ export function LeadershipManager() {
             onChange={(active) => setForm((prev) => ({ ...prev, active }))}
           />
 
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-brand-charcoal">Leadership photo</p>
-            {editingId || form.id ? (
-              <>
-                <input
-                  id="leadershipPhoto"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                  disabled={uploadingPhoto || saving}
-                  onChange={(event) => void handlePhotoUpload(event)}
-                  className="block w-full text-sm text-brand-gray file:mr-3 file:rounded-md file:border-0 file:bg-brand-red file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
-                />
-                <p className="text-xs text-brand-gray">
-                  JPEG, PNG, WebP, HEIC, or HEIF up to 4.5 MB.
-                </p>
-              </>
-            ) : (
-              <p className="text-sm text-brand-gray">
-                Save the leadership record first before uploading a photo.
-              </p>
-            )}
-
-            {photoPreviewUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={photoPreviewUrl}
-                alt={`Photo preview for ${form.name || "leadership member"}`}
-                className="aspect-[4/5] w-full max-w-xs rounded-md border border-gray-200 object-cover"
-              />
-            ) : form.photoFileId ? (
-              <div className="flex aspect-[4/5] w-full max-w-xs items-center justify-center rounded-md border border-gray-200 bg-brand-gray-light text-sm text-brand-gray">
-                Photo attached
-              </div>
-            ) : null}
-
-            {uploadError && (
-              <p className="text-sm font-medium text-brand-red" role="alert">
-                {uploadError}
-              </p>
-            )}
-          </div>
+          <ManagerPhotoUpload
+            label="Leadership photo"
+            photos={
+              form.photoFileId
+                ? [{ fileId: form.photoFileId, previewUrl: photoPreviewUrl }]
+                : []
+            }
+            disabled={saving}
+            uploading={uploadingPhoto}
+            uploadError={uploadError}
+            recordSaved={Boolean(editingId || form.id)}
+            maxPhotos={1}
+            aspectClassName="aspect-[4/5]"
+            hint="Portrait photo shown on the public leadership page. JPEG, PNG, WebP, HEIC, or HEIF up to 4.5 MB."
+            onUpload={(file) => void handlePhotoUpload(file)}
+            onRemove={() => void handleRemovePhoto()}
+          />
 
           {saveError && (
             <p className="text-sm font-medium text-brand-red" role="alert">
@@ -528,6 +540,18 @@ export function LeadershipManager() {
             return (
               <Card key={item.id} className={isArchived ? "opacity-70" : ""}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
+                  {item.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.photoUrl}
+                      alt={`${item.name} portrait`}
+                      className="h-24 w-20 shrink-0 rounded-lg border border-gray-200 object-cover sm:h-28 sm:w-24"
+                    />
+                  ) : (
+                    <div className="flex h-24 w-20 shrink-0 items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 text-center text-xs text-brand-gray sm:h-28 sm:w-24">
+                      No photo
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <LeadershipStatusBadge status={item.status} />

@@ -9,6 +9,7 @@ import {
   EmptyState,
   InfoBanner,
   ListToolbar,
+  ManagerPhotoUpload,
   SkeletonCardList,
   StatusBadge,
 } from "@/components/ui";
@@ -170,14 +171,24 @@ export function FleetManager() {
     setSaveError(null);
     setUploadError(null);
     setSuccessMessage(null);
+    if (record.imageFileIds.length === 0) {
+      setImagePreviews({});
+      return;
+    }
+    if (record.primaryImageUrl && record.imageFileIds[0]) {
+      const previews: Record<string, string> = {
+        [record.imageFileIds[0]]: record.primaryImageUrl,
+      };
+      setImagePreviews(previews);
+      if (record.imageFileIds.length > 1) {
+        void loadImagePreviews(record.imageFileIds);
+      }
+      return;
+    }
     void loadImagePreviews(record.imageFileIds);
   }
 
-  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
+  async function handleImageUpload(file: File) {
     const fleetId = editingId ?? form.id;
     if (!fleetId) {
       setUploadError("Save the fleet unit first before uploading photos.");
@@ -218,6 +229,42 @@ export function FleetManager() {
       setUploadError(error instanceof Error ? error.message : "Failed to upload fleet photo.");
     } finally {
       setUploadingImage(false);
+    }
+  }
+
+  async function handleRemoveImage(fileId: string) {
+    const fleetId = editingId ?? form.id;
+    if (!fleetId) return;
+
+    const nextImageFileIds = form.imageFileIds.filter((id) => id !== fileId);
+    setForm((prev) => ({ ...prev, imageFileIds: nextImageFileIds }));
+    setImagePreviews((prev) => {
+      const next = { ...prev };
+      delete next[fileId];
+      return next;
+    });
+    setUploadError(null);
+    setSaveError(null);
+
+    try {
+      await saveFleetUnit({
+        ...form,
+        id: fleetId,
+        name: form.name.trim(),
+        unitNumber: form.unitNumber.trim(),
+        type: form.type.trim(),
+        year: form.year.trim(),
+        manufacturer: form.manufacturer.trim(),
+        model: form.model.trim(),
+        equipmentNotes: form.equipmentNotes,
+        imageFileIds: nextImageFileIds,
+      });
+      await loadFleet(true);
+      setSuccessMessage("Fleet photo removed.");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Failed to remove fleet photo.");
+      setForm((prev) => ({ ...prev, imageFileIds: form.imageFileIds }));
+      void loadImagePreviews(form.imageFileIds);
     }
   }
 
@@ -528,59 +575,21 @@ export function FleetManager() {
             onChange={(active) => setForm((prev) => ({ ...prev, active }))}
           />
 
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-brand-charcoal">Fleet photos</p>
-            {editingId || form.id ? (
-              <>
-                <input
-                  id="fleetPhoto"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                  disabled={uploadingImage || saving}
-                  onChange={(event) => void handleImageUpload(event)}
-                  className="block w-full text-sm text-brand-gray file:mr-3 file:rounded-md file:border-0 file:bg-brand-red file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
-                />
-                <p className="text-xs text-brand-gray">
-                  JPEG, PNG, WebP, HEIC, or HEIF up to 4.5 MB. The first photo is shown on the
-                  public fleet page.
-                </p>
-              </>
-            ) : (
-              <p className="text-sm text-brand-gray">
-                Save the fleet unit first before uploading photos.
-              </p>
-            )}
-
-            {form.imageFileIds.length > 0 && (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {form.imageFileIds.map((fileId, index) => {
-                  const previewUrl = imagePreviews[fileId];
-                  return (
-                    <div key={fileId} className="overflow-hidden rounded-md border border-gray-200">
-                      {previewUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={previewUrl}
-                          alt={`Fleet photo ${index + 1}`}
-                          className="aspect-video w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex aspect-video items-center justify-center bg-brand-gray-light text-sm text-brand-gray">
-                          Photo attached
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {uploadError && (
-              <p className="text-sm font-medium text-brand-red" role="alert">
-                {uploadError}
-              </p>
-            )}
-          </div>
+          <ManagerPhotoUpload
+            label="Fleet photos"
+            photos={form.imageFileIds.map((fileId) => ({
+              fileId,
+              previewUrl: imagePreviews[fileId] ?? null,
+            }))}
+            disabled={saving}
+            uploading={uploadingImage}
+            uploadError={uploadError}
+            recordSaved={Boolean(editingId || form.id)}
+            maxPhotos={20}
+            hint="JPEG, PNG, WebP, HEIC, or HEIF up to 4.5 MB. The first photo appears on the public fleet page."
+            onUpload={(file) => void handleImageUpload(file)}
+            onRemove={(fileId) => void handleRemoveImage(fileId)}
+          />
 
           {saveError && (
             <p className="text-sm font-medium text-brand-red" role="alert">
@@ -620,6 +629,18 @@ export function FleetManager() {
             return (
               <Card key={item.id} className={isArchived ? "opacity-70" : ""}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
+                  {item.primaryImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.primaryImageUrl}
+                      alt={`${item.name} apparatus`}
+                      className="h-20 w-28 shrink-0 rounded-lg border border-gray-200 object-cover sm:h-24 sm:w-32"
+                    />
+                  ) : (
+                    <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 text-center text-xs text-brand-gray sm:h-24 sm:w-32">
+                      No photo
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <FleetStatusBadge status={item.status} />
@@ -674,6 +695,9 @@ export function FleetManager() {
                       </p>
                     )}
                     <p className="mt-3 text-xs text-brand-gray">
+                      {item.imageFileIds.length > 0
+                        ? `${item.imageFileIds.length} photo${item.imageFileIds.length === 1 ? "" : "s"} · `
+                        : ""}
                       Sort {item.sortOrder} · Updated {formatTimestamp(item.updatedAt)}
                     </p>
                   </div>
