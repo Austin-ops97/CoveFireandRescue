@@ -1,4 +1,8 @@
 import { isUserRole, type UserRole } from "@/lib/auth/roles";
+import {
+  parseCreateUserDepartmentEmail,
+  type CreateUserDepartmentEmailInput,
+} from "@/lib/email-provisioning/validation";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
@@ -56,9 +60,13 @@ export type CreateUserInput = {
   title: string | null;
   passwordMode: "temporary" | "reset_link";
   temporaryPassword: string | null;
+  departmentEmail: CreateUserDepartmentEmailInput;
 };
 
-export function parseCreateUserBody(body: Record<string, unknown>): CreateUserInput | Error {
+export function parseCreateUserBody(
+  body: Record<string, unknown>,
+  supportsUnlimited = true
+): CreateUserInput | Error {
   const firstName = normalizeRequiredString(body.firstName, "First name");
   if (firstName instanceof Error) return firstName;
 
@@ -87,6 +95,9 @@ export function parseCreateUserBody(body: Record<string, unknown>): CreateUserIn
     temporaryPassword = password;
   }
 
+  const departmentEmail = parseCreateUserDepartmentEmail(body, supportsUnlimited);
+  if (departmentEmail instanceof Error) return departmentEmail;
+
   return {
     firstName,
     lastName,
@@ -97,6 +108,7 @@ export function parseCreateUserBody(body: Record<string, unknown>): CreateUserIn
     title: normalizeOptionalString(body.title),
     passwordMode,
     temporaryPassword,
+    departmentEmail,
   };
 }
 

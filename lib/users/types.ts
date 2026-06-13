@@ -6,6 +6,8 @@ export type UserStatus = "active" | "inactive";
 
 export type PasswordSetupMode = "temporary" | "reset_link";
 
+export type EmailProvisioningStatus = "none" | "pending" | "provisioned" | "failed";
+
 export type ManagedUserProfile = {
   uid: string;
   email: string | null;
@@ -18,6 +20,9 @@ export type ManagedUserProfile = {
   active: boolean;
   createdBy: string | null;
   lastLoginAt: string | null;
+  departmentEmail: string | null;
+  emailProvisioningStatus: EmailProvisioningStatus;
+  emailProvisioningError: string | null;
   createdAt?: unknown;
   updatedAt?: unknown;
 };
@@ -32,6 +37,11 @@ export type CreateUserFormState = {
   title: string;
   passwordMode: PasswordSetupMode;
   temporaryPassword: string;
+  createDepartmentEmail: boolean;
+  departmentEmailUsername: string;
+  departmentEmailPassword: string;
+  departmentEmailPasswordConfirm: string;
+  departmentEmailQuota: 1024 | 2048 | 5120 | 0;
 };
 
 export type EditUserFormState = {

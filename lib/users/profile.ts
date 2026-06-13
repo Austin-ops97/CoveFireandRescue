@@ -2,7 +2,7 @@ import "server-only";
 
 import { Timestamp } from "firebase-admin/firestore";
 import { isUserRole, type UserRole } from "@/lib/auth/roles";
-import type { ManagedUserProfile } from "@/lib/users/types";
+import type { ManagedUserProfile, EmailProvisioningStatus } from "@/lib/users/types";
 
 export function buildDisplayName(
   firstName: string | null,
@@ -33,6 +33,18 @@ export function readProfileRole(value: unknown): UserRole {
   return "member";
 }
 
+function readEmailProvisioningStatus(value: unknown): EmailProvisioningStatus {
+  if (
+    value === "none" ||
+    value === "pending" ||
+    value === "provisioned" ||
+    value === "failed"
+  ) {
+    return value;
+  }
+  return "none";
+}
+
 export function toManagedUserProfile(
   uid: string,
   data: Record<string, unknown>,
@@ -54,6 +66,13 @@ export function toManagedUserProfile(
     active: data.active === true,
     createdBy: typeof data.createdBy === "string" ? data.createdBy : null,
     lastLoginAt: lastLoginAt ?? serializeTimestamp(data.lastLoginAt),
+    departmentEmail:
+      typeof data.departmentEmail === "string" ? data.departmentEmail : null,
+    emailProvisioningStatus: readEmailProvisioningStatus(data.emailProvisioningStatus),
+    emailProvisioningError:
+      typeof data.emailProvisioningError === "string"
+        ? data.emailProvisioningError
+        : null,
     createdAt: serializeTimestamp(data.createdAt) ?? data.createdAt ?? null,
     updatedAt: serializeTimestamp(data.updatedAt) ?? data.updatedAt ?? null,
   };

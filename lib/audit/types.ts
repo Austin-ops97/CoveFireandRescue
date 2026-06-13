@@ -7,6 +7,8 @@ export type AuditAction =
   | "user.deleted"
   | "user.role_changed"
   | "user.password_reset"
+  | "department_email_created"
+  | "department_email_password_reset"
   | "storage.upload.requested"
   | "storage.upload.completed"
   | "storage.upload.failed"

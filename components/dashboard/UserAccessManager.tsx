@@ -23,9 +23,17 @@ import {
   resetManagedUserPassword,
   updateManagedUser,
 } from "@/lib/users/client";
+import {
+  fetchEmailProvisioningConfig,
+  provisionDepartmentEmail,
+  resetDepartmentEmailPassword,
+  type EmailProvisioningConfig,
+} from "@/lib/email-provisioning/client";
+import { suggestDepartmentEmailUsername } from "@/lib/email-provisioning/validation";
 import type {
   CreateUserFormState,
   EditUserFormState,
+  EmailProvisioningStatus,
   ManagedUserProfile,
   ManagedUserRole,
   ResetPasswordFormState,
@@ -41,6 +49,18 @@ const emptyCreateForm: CreateUserFormState = {
   title: "",
   passwordMode: "reset_link",
   temporaryPassword: "",
+  createDepartmentEmail: false,
+  departmentEmailUsername: "",
+  departmentEmailPassword: "",
+  departmentEmailPasswordConfirm: "",
+  departmentEmailQuota: 1024,
+};
+
+const emptyDepartmentEmailForm = {
+  emailUsername: "",
+  password: "",
+  confirmPassword: "",
+  quotaMb: 1024 as 1024 | 2048 | 5120 | 0,
 };
 
 const emptyEditForm: EditUserFormState = {
@@ -59,7 +79,15 @@ const emptyResetForm: ResetPasswordFormState = {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type ModalMode = "create" | "edit" | "reset" | "disable" | "delete" | null;
+type ModalMode =
+  | "create"
+  | "edit"
+  | "reset"
+  | "disable"
+  | "delete"
+  | "department-email"
+  | "department-email-reset"
+  | null;
 
 function formatTimestamp(value: unknown): string {
   if (typeof value === "string") {
@@ -89,7 +117,10 @@ function profileToEditForm(profile: ManagedUserProfile): EditUserFormState {
   };
 }
 
-function validateCreateForm(form: CreateUserFormState): string | null {
+function validateCreateForm(
+  form: CreateUserFormState,
+  emailConfigured: boolean
+): string | null {
   if (!form.firstName.trim()) return "First name is required.";
   if (!form.lastName.trim()) return "Last name is required.";
   if (!form.email.trim() || !EMAIL_PATTERN.test(form.email.trim())) {
@@ -98,7 +129,35 @@ function validateCreateForm(form: CreateUserFormState): string | null {
   if (form.passwordMode === "temporary" && form.temporaryPassword.length < 8) {
     return "Temporary password must be at least 8 characters.";
   }
+  if (form.createDepartmentEmail) {
+    if (!emailConfigured) {
+      return "Department email provisioning is not configured on this server.";
+    }
+    if (!form.departmentEmailUsername.trim()) {
+      return "Email username is required.";
+    }
+    if (form.departmentEmailPassword.length < 8) {
+      return "Department email password must be at least 8 characters.";
+    }
+    if (form.departmentEmailPassword !== form.departmentEmailPasswordConfirm) {
+      return "Department email password and confirm password must match.";
+    }
+  }
   return null;
+}
+
+function emailStatusLabel(status: EmailProvisioningStatus): string {
+  if (status === "provisioned") return "Provisioned";
+  if (status === "pending") return "Pending";
+  if (status === "failed") return "Failed";
+  return "Not created";
+}
+
+function emailStatusVariant(status: EmailProvisioningStatus) {
+  if (status === "provisioned") return "active" as const;
+  if (status === "failed") return "inactive" as const;
+  if (status === "pending") return "info" as const;
+  return "neutral" as const;
 }
 
 function validateEditForm(form: EditUserFormState): string | null {
@@ -115,7 +174,10 @@ export function UserAccessManager() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [passwordSetupLink, setPasswordSetupLink] = useState<string | null>(null);
+  const [emailConfig, setEmailConfig] = useState<EmailProvisioningConfig | null>(null);
+  const [departmentEmailForm, setDepartmentEmailForm] = useState(emptyDepartmentEmailForm);
 
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<ManagedUserRole | "all">("all");
@@ -146,6 +208,42 @@ export function UserAccessManager() {
   useEffect(() => {
     void loadUsers();
   }, [loadUsers]);
+
+  useEffect(() => {
+    void fetchEmailProvisioningConfig()
+      .then(setEmailConfig)
+      .catch(() => {
+        setEmailConfig({
+          configured: false,
+          domain: null,
+          quotaOptions: [
+            { value: 1024, label: "1024 MB" },
+            { value: 2048, label: "2048 MB" },
+            { value: 5120, label: "5120 MB" },
+          ],
+          supportsUnlimited: false,
+        });
+      });
+  }, []);
+
+  useEffect(() => {
+    if (modalMode !== "create" || !createForm.createDepartmentEmail) return;
+    const suggested = suggestDepartmentEmailUsername(
+      createForm.firstName,
+      createForm.lastName
+    );
+    if (!suggested) return;
+    setCreateForm((prev) => {
+      if (prev.departmentEmailUsername.trim()) return prev;
+      return { ...prev, departmentEmailUsername: suggested };
+    });
+  }, [
+    modalMode,
+    createForm.createDepartmentEmail,
+    createForm.firstName,
+    createForm.lastName,
+    createForm.departmentEmailUsername,
+  ]);
 
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -178,14 +276,40 @@ export function UserAccessManager() {
     setCreateForm(emptyCreateForm);
     setEditForm(emptyEditForm);
     setResetForm(emptyResetForm);
+    setDepartmentEmailForm(emptyDepartmentEmailForm);
   }
 
   function openCreateModal() {
     setSuccessMessage(null);
+    setWarningMessage(null);
     setPasswordSetupLink(null);
     setActionError(null);
     setCreateForm(emptyCreateForm);
     setModalMode("create");
+  }
+
+  function openDepartmentEmailModal(user: ManagedUserProfile) {
+    setActionError(null);
+    setSelectedUser(user);
+    setDepartmentEmailForm({
+      ...emptyDepartmentEmailForm,
+      emailUsername: suggestDepartmentEmailUsername(
+        user.firstName ?? "",
+        user.lastName ?? ""
+      ),
+      quotaMb: (emailConfig?.quotaOptions[0]?.value ?? 1024) as 1024 | 2048 | 5120 | 0,
+    });
+    setModalMode("department-email");
+  }
+
+  function openDepartmentEmailResetModal(user: ManagedUserProfile) {
+    setActionError(null);
+    setSelectedUser(user);
+    setDepartmentEmailForm({
+      ...emptyDepartmentEmailForm,
+      emailUsername: "",
+    });
+    setModalMode("department-email-reset");
   }
 
   function openEditModal(user: ManagedUserProfile) {
@@ -220,7 +344,7 @@ export function UserAccessManager() {
     setActionError(null);
     setPasswordSetupLink(null);
 
-    const validationError = validateCreateForm(createForm);
+    const validationError = validateCreateForm(createForm, emailConfig?.configured ?? false);
     if (validationError) {
       setActionError(validationError);
       return;
@@ -232,6 +356,7 @@ export function UserAccessManager() {
       await loadUsers(true);
       closeModal();
       setSuccessMessage(result.message);
+      setWarningMessage(result.emailWarning ?? null);
       if (result.passwordSetupLink) {
         setPasswordSetupLink(result.passwordSetupLink);
       }
@@ -308,6 +433,71 @@ export function UserAccessManager() {
     }
   }
 
+  async function handleDepartmentEmailSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selectedUser) return;
+    setActionError(null);
+
+    if (!departmentEmailForm.emailUsername.trim()) {
+      setActionError("Email username is required.");
+      return;
+    }
+    if (departmentEmailForm.password.length < 8) {
+      setActionError("Email password must be at least 8 characters.");
+      return;
+    }
+    if (departmentEmailForm.password !== departmentEmailForm.confirmPassword) {
+      setActionError("Password and confirm password must match.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const result = await provisionDepartmentEmail(selectedUser.uid, departmentEmailForm);
+      await loadUsers(true);
+      closeModal();
+      setSuccessMessage(result.message);
+      setWarningMessage(null);
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : "Failed to provision department email."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDepartmentEmailResetSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selectedUser) return;
+    setActionError(null);
+
+    if (departmentEmailForm.password.length < 8) {
+      setActionError("Email password must be at least 8 characters.");
+      return;
+    }
+    if (departmentEmailForm.password !== departmentEmailForm.confirmPassword) {
+      setActionError("Password and confirm password must match.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const result = await resetDepartmentEmailPassword(selectedUser.uid, {
+        password: departmentEmailForm.password,
+        confirmPassword: departmentEmailForm.confirmPassword,
+      });
+      closeModal();
+      setSuccessMessage(result.message);
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : "Failed to reset department email password."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleDeleteConfirm() {
     if (!selectedUser) return;
     setSaving(true);
@@ -339,6 +529,12 @@ export function UserAccessManager() {
       </div>
 
       {successMessage && <AlertBanner variant="success">{successMessage}</AlertBanner>}
+
+      {warningMessage && (
+        <AlertBanner variant="warning" title="Department email warning">
+          {warningMessage}
+        </AlertBanner>
+      )}
 
       {passwordSetupLink && (
         <AlertBanner variant="info" title="Password setup link">
@@ -698,6 +894,136 @@ export function UserAccessManager() {
                 />
               </FormField>
             )}
+
+            <div className="rounded-xl border border-brand-gray/15 bg-brand-charcoal/[0.02] p-4 sm:p-5">
+              <div className="flex items-start gap-3">
+                <input
+                  id="createDepartmentEmail"
+                  type="checkbox"
+                  checked={createForm.createDepartmentEmail}
+                  disabled={!emailConfig?.configured}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      createDepartmentEmail: event.target.checked,
+                      departmentEmailUsername: event.target.checked
+                        ? prev.departmentEmailUsername ||
+                          suggestDepartmentEmailUsername(prev.firstName, prev.lastName)
+                        : "",
+                    }))
+                  }
+                  className="mt-1 h-4 w-4 rounded border-brand-gray/30 text-brand-red focus:ring-brand-red/30"
+                />
+                <div className="min-w-0 flex-1 space-y-4">
+                  <div>
+                    <label
+                      htmlFor="createDepartmentEmail"
+                      className="text-sm font-semibold text-brand-charcoal"
+                    >
+                      Create department email for this user
+                    </label>
+                    <p className="mt-1 text-sm text-brand-gray">
+                      This will create a department email account for the member through the
+                      secure email server.
+                    </p>
+                    {!emailConfig?.configured && (
+                      <p className="mt-2 text-sm text-amber-800">
+                        Department email provisioning is not configured on this server.
+                      </p>
+                    )}
+                  </div>
+
+                  {createForm.createDepartmentEmail && emailConfig?.configured && (
+                    <div className="space-y-4 border-t border-brand-gray/10 pt-4">
+                      <FormField
+                        id="createDepartmentEmailUsername"
+                        label="Email username"
+                        hint={
+                          emailConfig.domain
+                            ? `Address will be ${createForm.departmentEmailUsername || "username"}@${emailConfig.domain}`
+                            : undefined
+                        }
+                        required
+                      >
+                        <Input
+                          id="createDepartmentEmailUsername"
+                          value={createForm.departmentEmailUsername}
+                          onChange={(event) =>
+                            setCreateForm((prev) => ({
+                              ...prev,
+                              departmentEmailUsername: event.target.value.toLowerCase(),
+                            }))
+                          }
+                          autoComplete="off"
+                          required
+                        />
+                      </FormField>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                          id="createDepartmentEmailPassword"
+                          label="Temporary email password"
+                          required
+                        >
+                          <Input
+                            id="createDepartmentEmailPassword"
+                            type="password"
+                            value={createForm.departmentEmailPassword}
+                            onChange={(event) =>
+                              setCreateForm((prev) => ({
+                                ...prev,
+                                departmentEmailPassword: event.target.value,
+                              }))
+                            }
+                            autoComplete="new-password"
+                            required
+                          />
+                        </FormField>
+                        <FormField
+                          id="createDepartmentEmailPasswordConfirm"
+                          label="Confirm password"
+                          required
+                        >
+                          <Input
+                            id="createDepartmentEmailPasswordConfirm"
+                            type="password"
+                            value={createForm.departmentEmailPasswordConfirm}
+                            onChange={(event) =>
+                              setCreateForm((prev) => ({
+                                ...prev,
+                                departmentEmailPasswordConfirm: event.target.value,
+                              }))
+                            }
+                            autoComplete="new-password"
+                            required
+                          />
+                        </FormField>
+                      </div>
+                      <FormField id="createDepartmentEmailQuota" label="Mailbox quota" required>
+                        <Select
+                          id="createDepartmentEmailQuota"
+                          value={createForm.departmentEmailQuota}
+                          onChange={(event) =>
+                            setCreateForm((prev) => ({
+                              ...prev,
+                              departmentEmailQuota: Number(
+                                event.target.value
+                              ) as CreateUserFormState["departmentEmailQuota"],
+                            }))
+                          }
+                        >
+                          {(emailConfig?.quotaOptions ?? []).map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {actionError && (
               <p className="text-sm font-medium text-brand-red" role="alert">
                 {actionError}
@@ -802,6 +1128,73 @@ export function UserAccessManager() {
                 />
               </FormField>
             </div>
+
+            <div className="rounded-xl border border-brand-gray/15 bg-brand-charcoal/[0.02] p-4 sm:p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-brand-charcoal">Department email</h3>
+                  <p className="mt-1 text-sm text-brand-gray">
+                    Manage the member&apos;s department mailbox on the secure email server.
+                  </p>
+                </div>
+                <StatusBadge
+                  label={emailStatusLabel(selectedUser.emailProvisioningStatus)}
+                  variant={emailStatusVariant(selectedUser.emailProvisioningStatus)}
+                />
+              </div>
+
+              <dl className="mt-4 space-y-2 text-sm">
+                <div className="flex flex-wrap gap-x-2">
+                  <dt className="font-medium text-brand-charcoal">Address:</dt>
+                  <dd className="text-brand-gray">
+                    {selectedUser.departmentEmail ?? "Not provisioned"}
+                  </dd>
+                </div>
+                {selectedUser.emailProvisioningStatus === "failed" &&
+                  selectedUser.emailProvisioningError && (
+                    <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-amber-950">
+                      {selectedUser.emailProvisioningError}
+                    </div>
+                  )}
+              </dl>
+
+              {emailConfig?.configured && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(selectedUser.emailProvisioningStatus === "none" ||
+                    selectedUser.emailProvisioningStatus === "pending") && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openDepartmentEmailModal(selectedUser)}
+                    >
+                      Create email
+                    </Button>
+                  )}
+                  {selectedUser.emailProvisioningStatus === "failed" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openDepartmentEmailModal(selectedUser)}
+                    >
+                      Retry email creation
+                    </Button>
+                  )}
+                  {selectedUser.emailProvisioningStatus === "provisioned" && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openDepartmentEmailResetModal(selectedUser)}
+                    >
+                      Reset email password
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
             {actionError && (
               <p className="text-sm font-medium text-brand-red" role="alert">
                 {actionError}
@@ -860,6 +1253,177 @@ export function UserAccessManager() {
                 />
               </FormField>
             )}
+            {actionError && (
+              <p className="text-sm font-medium text-brand-red" role="alert">
+                {actionError}
+              </p>
+            )}
+          </form>
+        </Modal>
+      )}
+
+      {modalMode === "department-email" && selectedUser && (
+        <Modal
+          title={
+            selectedUser.emailProvisioningStatus === "failed"
+              ? "Retry email creation"
+              : "Create department email"
+          }
+          description={selectedUser.displayName ?? selectedUser.email ?? undefined}
+          onClose={closeModal}
+          footer={
+            <>
+              <Button type="button" variant="ghost" onClick={closeModal} disabled={saving}>
+                Cancel
+              </Button>
+              <Button type="submit" form="department-email-form" disabled={saving}>
+                {saving ? "Working…" : "Create email"}
+              </Button>
+            </>
+          }
+        >
+          <form
+            id="department-email-form"
+            onSubmit={handleDepartmentEmailSubmit}
+            className="space-y-4"
+          >
+            <FormField
+              id="departmentEmailUsername"
+              label="Email username"
+              hint={
+                emailConfig?.domain
+                  ? `Address will be ${departmentEmailForm.emailUsername || "username"}@${emailConfig.domain}`
+                  : undefined
+              }
+              required
+            >
+              <Input
+                id="departmentEmailUsername"
+                value={departmentEmailForm.emailUsername}
+                onChange={(event) =>
+                  setDepartmentEmailForm((prev) => ({
+                    ...prev,
+                    emailUsername: event.target.value.toLowerCase(),
+                  }))
+                }
+                autoComplete="off"
+                required
+              />
+            </FormField>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="departmentEmailPassword" label="Temporary email password" required>
+                <Input
+                  id="departmentEmailPassword"
+                  type="password"
+                  value={departmentEmailForm.password}
+                  onChange={(event) =>
+                    setDepartmentEmailForm((prev) => ({
+                      ...prev,
+                      password: event.target.value,
+                    }))
+                  }
+                  autoComplete="new-password"
+                  required
+                />
+              </FormField>
+              <FormField id="departmentEmailConfirmPassword" label="Confirm password" required>
+                <Input
+                  id="departmentEmailConfirmPassword"
+                  type="password"
+                  value={departmentEmailForm.confirmPassword}
+                  onChange={(event) =>
+                    setDepartmentEmailForm((prev) => ({
+                      ...prev,
+                      confirmPassword: event.target.value,
+                    }))
+                  }
+                  autoComplete="new-password"
+                  required
+                />
+              </FormField>
+            </div>
+            <FormField id="departmentEmailQuota" label="Mailbox quota" required>
+              <Select
+                id="departmentEmailQuota"
+                value={departmentEmailForm.quotaMb}
+                onChange={(event) =>
+                  setDepartmentEmailForm((prev) => ({
+                    ...prev,
+                    quotaMb: Number(event.target.value) as 1024 | 2048 | 5120 | 0,
+                  }))
+                }
+              >
+                {(emailConfig?.quotaOptions ?? []).map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <p className="text-sm text-brand-gray">
+              This will create a department email account for the member through the secure
+              email server.
+            </p>
+            {actionError && (
+              <p className="text-sm font-medium text-brand-red" role="alert">
+                {actionError}
+              </p>
+            )}
+          </form>
+        </Modal>
+      )}
+
+      {modalMode === "department-email-reset" && selectedUser && (
+        <Modal
+          title="Reset email password"
+          description={selectedUser.departmentEmail ?? undefined}
+          onClose={closeModal}
+          footer={
+            <>
+              <Button type="button" variant="ghost" onClick={closeModal} disabled={saving}>
+                Cancel
+              </Button>
+              <Button type="submit" form="department-email-reset-form" disabled={saving}>
+                {saving ? "Working…" : "Reset email password"}
+              </Button>
+            </>
+          }
+        >
+          <form
+            id="department-email-reset-form"
+            onSubmit={handleDepartmentEmailResetSubmit}
+            className="space-y-4"
+          >
+            <FormField id="resetDepartmentEmailPassword" label="New email password" required>
+              <Input
+                id="resetDepartmentEmailPassword"
+                type="password"
+                value={departmentEmailForm.password}
+                onChange={(event) =>
+                  setDepartmentEmailForm((prev) => ({
+                    ...prev,
+                    password: event.target.value,
+                  }))
+                }
+                autoComplete="new-password"
+                required
+              />
+            </FormField>
+            <FormField id="resetDepartmentEmailConfirmPassword" label="Confirm password" required>
+              <Input
+                id="resetDepartmentEmailConfirmPassword"
+                type="password"
+                value={departmentEmailForm.confirmPassword}
+                onChange={(event) =>
+                  setDepartmentEmailForm((prev) => ({
+                    ...prev,
+                    confirmPassword: event.target.value,
+                  }))
+                }
+                autoComplete="new-password"
+                required
+              />
+            </FormField>
             {actionError && (
               <p className="text-sm font-medium text-brand-red" role="alert">
                 {actionError}

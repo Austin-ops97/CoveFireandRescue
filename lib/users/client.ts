@@ -36,6 +36,8 @@ export type CreateUserResult = {
   user: ManagedUserProfile;
   message: string;
   passwordSetupLink: string | null;
+  emailWarning?: string | null;
+  departmentEmail?: string | null;
 };
 
 export async function createManagedUser(
@@ -55,6 +57,19 @@ export async function createManagedUser(
       passwordMode: payload.passwordMode,
       temporaryPassword:
         payload.passwordMode === "temporary" ? payload.temporaryPassword : null,
+      createDepartmentEmail: payload.createDepartmentEmail,
+      departmentEmailUsername: payload.createDepartmentEmail
+        ? payload.departmentEmailUsername.trim()
+        : null,
+      departmentEmailPassword: payload.createDepartmentEmail
+        ? payload.departmentEmailPassword
+        : null,
+      departmentEmailPasswordConfirm: payload.createDepartmentEmail
+        ? payload.departmentEmailPasswordConfirm
+        : null,
+      departmentEmailQuota: payload.createDepartmentEmail
+        ? payload.departmentEmailQuota
+        : null,
     }),
   });
 
