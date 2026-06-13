@@ -93,6 +93,10 @@ export async function archiveChecklistTemplate(id: string): Promise<void> {
 export async function submitChecklist(
   payload: ChecklistSubmissionPayload
 ): Promise<ChecklistSubmissionRecord> {
+  if (process.env.NODE_ENV === "development") {
+    console.log("[checklist-submission] submit payload:", payload);
+  }
+
   const response = await authenticatedFetch("/api/checklist-submissions", {
     method: "POST",
     headers: {
@@ -101,8 +105,16 @@ export async function submitChecklist(
     body: JSON.stringify(payload),
   });
 
+  if (process.env.NODE_ENV === "development") {
+    console.log("[checklist-submission] submit response:", response.status, response.statusText);
+  }
+
   if (!response.ok) {
-    throw new Error(await readApiError(response));
+    const errorMessage = await readApiError(response);
+    if (process.env.NODE_ENV === "development") {
+      console.error("[checklist-submission] submit failed:", errorMessage);
+    }
+    throw new Error(errorMessage);
   }
 
   const data = (await response.json()) as { submission?: ChecklistSubmissionRecord };

@@ -144,12 +144,17 @@ function readAnswers(value: unknown): ChecklistSubmissionAnswer[] {
 
     const photoFileIds = readStringArray(data.photoFileIds);
 
-    answers.push({
+    const answer: ChecklistSubmissionAnswer = {
       fieldId: data.fieldId.trim(),
       sectionId: data.sectionId.trim(),
       value: readAnswerValue(data.value),
-      photoFileIds: photoFileIds.length > 0 ? photoFileIds : undefined,
-    });
+    };
+
+    if (photoFileIds.length > 0) {
+      answer.photoFileIds = photoFileIds;
+    }
+
+    answers.push(answer);
   }
 
   return answers;
@@ -669,12 +674,17 @@ export function validateChecklistSubmissionPayload(
   const normalizedAnswers = allFields.map((field) => {
     const section = template.sections.find((item) => item.fields.some((f) => f.id === field.id))!;
     const answer = answerMap.get(field.id)!;
-    return {
+    const normalized: ChecklistSubmissionAnswer = {
       fieldId: field.id,
       sectionId: section.id,
       value: answer.value,
-      photoFileIds: answer.photoFileIds,
     };
+
+    if (answer.photoFileIds && answer.photoFileIds.length > 0) {
+      normalized.photoFileIds = answer.photoFileIds;
+    }
+
+    return normalized;
   });
 
   return {

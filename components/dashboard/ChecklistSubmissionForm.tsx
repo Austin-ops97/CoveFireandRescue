@@ -273,14 +273,20 @@ export function ChecklistSubmissionForm() {
     );
 
     try {
-      await submitChecklist({
+      const submitPayload = {
         templateId: selectedTemplate.id,
         relatedFleetUnitId:
           selectedTemplate.scope === "fleet" ? relatedFleetUnitId || null : null,
         notes: notes.trim() || undefined,
         photoFileIds: generalPhotoFileIds,
         answers: submissionAnswers,
-      });
+      };
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("[ChecklistSubmissionForm] submitting checklist:", submitPayload);
+      }
+
+      await submitChecklist(submitPayload);
 
       clearChecklistSubmissionDraft();
       setSuccessMessage("Inspection submitted successfully.");

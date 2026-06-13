@@ -4,6 +4,7 @@ import { writeAuditLog } from "@/lib/audit/server";
 import {
   requireDashboardAccess,
   requireServerRole,
+  ServerAuthError,
   serverAuthErrorResponse,
 } from "@/lib/auth/server";
 import { adminDb } from "@/lib/firebase/admin";
@@ -15,12 +16,46 @@ import {
   serializeChecklistSubmissionDoc,
   serializeChecklistTemplateDoc,
   sortSubmissionsNewestFirst,
+  stripUndefinedDeep,
   validateChecklistSubmissionPayload,
 } from "@/lib/checklist/server";
 import type { ChecklistSubmissionPayload, ChecklistTemplateScope } from "@/lib/checklist/types";
 
 function badRequest(message: string): Response {
   return NextResponse.json({ error: message }, { status: 400 });
+}
+
+function handleChecklistSubmissionRouteError(error: unknown, context: string): Response {
+  if (error instanceof ServerAuthError) {
+    return serverAuthErrorResponse(error);
+  }
+
+  if (error instanceof ChecklistValidationError) {
+    return badRequest(error.message);
+  }
+
+  console.error(`${context}:`, error);
+
+  if (error instanceof Error && error.message.trim()) {
+    const message = error.message.toLowerCase();
+    if (message.includes("undefined") && message.includes("firestore")) {
+      return NextResponse.json(
+        {
+          error: "Submission data contained invalid values. Please review your answers and try again.",
+          code: "invalid_submission_data",
+        },
+        { status: 400 }
+      );
+    }
+  }
+
+  return NextResponse.json(
+    {
+      error: "Failed to save checklist submission. Please try again.",
+      code: "save_failed",
+    },
+    { status: 500 }
+  );
 }
 
 async function resolveFleetUnitName(fleetUnitId: string | null): Promise<string | null> {
@@ -83,7 +118,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ submissions });
   } catch (error) {
-    return serverAuthErrorResponse(error);
+    return handleChecklistSubmissionRouteError(error, "GET /api/checklist-submissions");
   }
 }
 
@@ -139,7 +174,7 @@ export async function POST(request: Request) {
       submittedBy: actor.uid,
       submittedByName: actor.displayName ?? actor.email ?? null,
       notes: validated.notes,
-      answers: validated.answers,
+      answers: stripUndefinedDeep(validated.answers),
       photoFileIds: validated.photoFileIds,
       submittedAt: FieldValue.serverTimestamp(),
     };
@@ -159,6 +194,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ submission: saved }, { status: 201 });
   } catch (error) {
-    return serverAuthErrorResponse(error);
+    return handleChecklistSubmissionRouteError(error, "POST /api/checklist-submissions");
   }
 }
