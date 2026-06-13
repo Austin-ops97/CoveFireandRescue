@@ -129,7 +129,14 @@ export const siteConfig = {
 
   mapsEmbedUrl:
     "https://www.google.com/maps?q=5735+S+FM+565,+Cove,+TX+77523&output=embed",
+
+  donate: {
+    paypalUrl:
+      "https://www.paypal.com/donate/?hosted_button_id=VZDMQH8HJ2UKC",
+  },
 } as const;
+
+export const PAYPAL_DONATE_URL = siteConfig.donate.paypalUrl;
 
 export const departmentHistory = `One warm summer night, a group of volunteers met in the Old Cove Community Building to form an organization dedicated to providing safety and security for their families and neighbors. Starting with an old broken-down fire truck purchased from neighboring Mont Belvieu for $1.00, which had to be towed back to Cove, the department was built through untold hours of volunteer labor.
 

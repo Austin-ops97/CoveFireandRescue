@@ -6,12 +6,20 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { canAccessDashboard } from "@/lib/auth/roles";
+import { DonateModal } from "@/components/site/DonateModal";
 import { mainNavLinks } from "@/lib/config/navigation";
+
+const donateButtonClass =
+  "rounded-[10px] border border-gold-500 bg-gold-500 font-bold text-text-dark shadow-sm transition-colors hover:border-gold-600 hover:bg-gold-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/50 focus-visible:ring-offset-2";
+
+const donateButtonDesktopClass = `ml-1 inline-flex min-h-10 items-center px-3 py-2 text-sm ${donateButtonClass}`;
+const donateButtonMobileClass = `block w-full min-h-11 px-4 py-3 text-left text-base ${donateButtonClass}`;
 
 export function Header() {
   const pathname = usePathname();
   const { user, role, loading } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [donateOpen, setDonateOpen] = useState(false);
 
   const navLinks = useMemo(() => {
     if (loading || !user || !canAccessDashboard(role)) {
@@ -56,6 +64,14 @@ export function Header() {
     }`;
   };
 
+  const openDonateModal = () => {
+    setMobileOpen(false);
+    setDonateOpen(true);
+  };
+
+  const standardNavLinks = navLinks.filter((link) => !link.cta);
+  const ctaNavLinks = navLinks.filter((link) => link.cta);
+
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-[0_2px_12px_rgba(16,24,40,0.06)]">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6 lg:px-8">
@@ -83,7 +99,19 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Main navigation">
-          {navLinks.map((link) => (
+          {standardNavLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={navLinkClass(link.href)}
+            >
+              {link.label}
+            </Link>
+          ))}
+          <button type="button" className={donateButtonDesktopClass} onClick={openDonateModal}>
+            Donate
+          </button>
+          {ctaNavLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -128,17 +156,34 @@ export function Header() {
             aria-label="Mobile navigation"
           >
             <ul className="flex flex-col gap-1 p-3">
-              {navLinks.map((link) => (
+              {standardNavLinks.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
                     className={`block min-h-11 rounded-[10px] px-4 py-3 text-base font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700/40 ${
-                      link.cta
-                        ? "border border-navy-900 bg-navy-900 font-bold text-white hover:border-navy-800 hover:bg-navy-800"
-                        : isActive(link.href)
-                          ? "bg-[#EEF2FF] text-blue-700"
-                          : "text-text-dark hover:bg-gray-100"
+                      isActive(link.href)
+                        ? "bg-[#EEF2FF] text-blue-700"
+                        : "text-text-dark hover:bg-gray-100"
                     }`}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <button
+                  type="button"
+                  className={donateButtonMobileClass}
+                  onClick={openDonateModal}
+                >
+                  Donate
+                </button>
+              </li>
+              {ctaNavLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="block min-h-11 rounded-[10px] border border-navy-900 bg-navy-900 px-4 py-3 text-base font-bold text-white transition-colors hover:border-navy-800 hover:bg-navy-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700/40"
                   >
                     {link.label}
                   </Link>
@@ -148,6 +193,8 @@ export function Header() {
           </nav>
         </>
       )}
+
+      {donateOpen && <DonateModal onClose={() => setDonateOpen(false)} />}
     </header>
   );
 }

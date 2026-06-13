@@ -6,7 +6,7 @@ import { Button } from "@/components/site/Button";
 type ModalProps = {
   title: string;
   description?: string;
-  children: ReactNode;
+  children?: ReactNode;
   onClose: () => void;
   footer?: ReactNode;
   size?: "md" | "lg" | "xl";
@@ -80,7 +80,9 @@ export function Modal({
           </Button>
         </div>
 
-        <div className="px-5 py-5 sm:px-6">{children}</div>
+        {children != null && children !== false && (
+          <div className="px-5 py-5 sm:px-6">{children}</div>
+        )}
 
         {footer && (
           <div className="flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 px-5 py-4 sm:px-6">

@@ -81,7 +81,7 @@ export function DashboardNav() {
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/60">
             Jump to a tool
           </p>
-          <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex flex-wrap gap-2 max-md:flex-nowrap max-md:overflow-x-auto max-md:pb-1 max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden">
             {navItems.map((item) => {
               const active = isDashboardNavItemActive(pathname, item);
               return (
