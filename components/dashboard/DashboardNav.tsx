@@ -88,9 +88,9 @@ export function DashboardNav() {
     }`;
 
   return (
-    <div className="border-b-4 border-gold-500 bg-navy-900 text-white shadow-lg safe-area-x">
+    <div className="border-b-2 border-gold-500 bg-navy-900 text-white shadow-lg safe-area-x md:border-b-4">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-3 py-3">
+        <div className="flex items-center justify-between gap-2 py-2 md:flex-wrap md:gap-3 md:py-3">
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             {!onDashboardHome && (
               <Link
@@ -103,38 +103,39 @@ export function DashboardNav() {
               </Link>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-gold-500">
+              <p className="hidden text-xs font-bold uppercase tracking-[0.14em] text-gold-500 md:block">
                 Member portal
               </p>
-              <p className="truncate text-sm text-white/80">
+              <p className="truncate text-sm text-white/90">
                 <span className="font-semibold text-white">{displayName}</span>
                 <span className="mx-1.5 text-white/40 md:hidden">·</span>
-                <span className="font-medium text-gold-500 md:hidden">{currentPageLabel}</span>
+                <span className="text-gold-500 md:hidden">{currentPageLabel}</span>
               </p>
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
             <button
               type="button"
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 md:hidden"
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/25 bg-white/10 px-2.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 md:hidden"
               aria-expanded={menuOpen}
               aria-controls="dashboard-mobile-menu"
               onClick={() => setMenuOpen(true)}
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-              Tools
+              Menu
             </button>
             <Button
               type="button"
               variant="heroTertiary"
               size="sm"
+              className="!min-h-9 !px-3 !py-1.5 !text-xs md:!min-h-11 md:!px-3 md:!py-2 md:!text-sm"
               disabled={signingOut}
               onClick={() => void handleSignOut()}
             >
-              {signingOut ? "Signing out…" : "Sign out"}
+              {signingOut ? "…" : "Sign out"}
             </Button>
           </div>
         </div>
