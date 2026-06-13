@@ -16,6 +16,10 @@ import {
   writeDepartmentEmailAudit,
   writeDepartmentEmailPasswordResetAudit,
 } from "@/lib/email-provisioning/audit";
+import {
+  buildMailClientSettings,
+  type MailClientSettings,
+} from "@/lib/email-provisioning/mail-settings";
 import type { DepartmentEmailInput } from "@/lib/email-provisioning/validation";
 import { toManagedUserProfile } from "@/lib/users/profile";
 import type { EmailProvisioningStatus, ManagedUserProfile } from "@/lib/users/types";
@@ -38,7 +42,22 @@ export type EmailProvisioningConfig = {
   domain: string | null;
   quotaOptions: Array<{ value: number; label: string }>;
   supportsUnlimited: boolean;
+  mailClientSettings: MailClientSettings | null;
 };
+
+function readMailClientSettingsFromEnv(emailDomain: string): MailClientSettings {
+  const parsePort = (value: string | undefined, fallback: number) => {
+    const parsed = Number(value?.trim());
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+  };
+
+  return buildMailClientSettings(emailDomain, {
+    mailHost: process.env.CPANEL_MAIL_HOST,
+    imapPortSsl: parsePort(process.env.CPANEL_MAIL_IMAP_PORT, 993),
+    pop3PortSsl: parsePort(process.env.CPANEL_MAIL_POP3_PORT, 995),
+    smtpPortSsl: parsePort(process.env.CPANEL_MAIL_SMTP_PORT, 465),
+  });
+}
 
 export async function getEmailProvisioningConfig(): Promise<EmailProvisioningConfig> {
   const configured = isCpanelConfigured();
@@ -60,6 +79,7 @@ export async function getEmailProvisioningConfig(): Promise<EmailProvisioningCon
     domain,
     quotaOptions,
     supportsUnlimited,
+    mailClientSettings: configured && domain ? readMailClientSettingsFromEnv(domain) : null,
   };
 }
 

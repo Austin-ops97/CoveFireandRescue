@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { EmailSetupShareCard } from "@/components/dashboard/EmailSetupShareCard";
 import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
 import {
@@ -91,6 +92,7 @@ type ModalMode =
   | "reset"
   | "retry-auth"
   | "email-reset"
+  | "email-setup"
   | "disable"
   | "delete"
   | null;
@@ -193,6 +195,7 @@ export function UserAccessManager() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [passwordSetupLink, setPasswordSetupLink] = useState<string | null>(null);
+  const [emailSetupShareEmail, setEmailSetupShareEmail] = useState<string | null>(null);
   const [emailConfig, setEmailConfig] = useState<EmailProvisioningConfig | null>(null);
   const [previewEmail, setPreviewEmail] = useState<string | null>(null);
   const [previewAvailable, setPreviewAvailable] = useState<boolean | null>(null);
@@ -242,6 +245,7 @@ export function UserAccessManager() {
             { value: 5120, label: "5120 MB" },
           ],
           supportsUnlimited: false,
+          mailClientSettings: null,
         });
       });
   }, []);
@@ -333,14 +337,25 @@ export function UserAccessManager() {
     setEmailResetForm(emptyEmailResetForm);
     setPreviewEmail(null);
     setPreviewAvailable(null);
+    setEmailSetupShareEmail(null);
   }
 
   function openCreateModal() {
     setSuccessMessage(null);
     setPasswordSetupLink(null);
+    setEmailSetupShareEmail(null);
     setActionError(null);
     setCreateForm(emptyCreateForm);
     setModalMode("create");
+  }
+
+  function openEmailSetupModal(user: ManagedUserProfile) {
+    const email = getDisplayDepartmentEmail(user);
+    if (!email || !emailConfig?.mailClientSettings) return;
+    setActionError(null);
+    setSelectedUser(user);
+    setEmailSetupShareEmail(email);
+    setModalMode("email-setup");
   }
 
   function openEditModal(user: ManagedUserProfile) {
@@ -400,6 +415,9 @@ export function UserAccessManager() {
       await loadUsers(true);
       closeModal();
       setSuccessMessage(result.message);
+      if (result.departmentEmail && emailConfig?.mailClientSettings) {
+        setEmailSetupShareEmail(result.departmentEmail);
+      }
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Failed to create user.");
     } finally {
@@ -555,6 +573,14 @@ export function UserAccessManager() {
       </div>
 
       {successMessage && <AlertBanner variant="success">{successMessage}</AlertBanner>}
+
+      {emailSetupShareEmail && emailConfig?.mailClientSettings && !modalMode && (
+        <EmailSetupShareCard
+          emailAddress={emailSetupShareEmail}
+          mailSettings={emailConfig.mailClientSettings}
+          onDismiss={() => setEmailSetupShareEmail(null)}
+        />
+      )}
 
       {passwordSetupLink && (
         <AlertBanner variant="info" title="Password setup link">
@@ -724,6 +750,17 @@ export function UserAccessManager() {
                                 Retry portal setup
                               </button>
                             )}
+                            {user.emailProvisioningStatus === "provisioned" &&
+                              getDisplayDepartmentEmail(user) &&
+                              emailConfig?.mailClientSettings && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEmailSetupModal(user)}
+                                  className="text-xs font-semibold text-brand-red hover:underline"
+                                >
+                                  Email setup QR
+                                </button>
+                              )}
                             {user.emailProvisioningStatus === "provisioned" &&
                               getDisplayDepartmentEmail(user) && (
                                 <button
@@ -1084,6 +1121,20 @@ export function UserAccessManager() {
                   {selectedUser.authProvisioningError}
                 </p>
               )}
+              {selectedUser.emailProvisioningStatus === "provisioned" &&
+                getDisplayDepartmentEmail(selectedUser) &&
+                emailConfig?.mailClientSettings && (
+                  <div className="mt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEmailSetupModal(selectedUser)}
+                    >
+                      Share email setup QR
+                    </Button>
+                  </div>
+                )}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -1330,6 +1381,28 @@ export function UserAccessManager() {
           </form>
         </Modal>
       )}
+
+      {modalMode === "email-setup" &&
+        selectedUser &&
+        emailSetupShareEmail &&
+        emailConfig?.mailClientSettings && (
+          <Modal
+            title="Email setup QR code"
+            description="Share these secure mail settings with the member."
+            onClose={closeModal}
+            footer={
+              <Button type="button" variant="ghost" onClick={closeModal}>
+                Close
+              </Button>
+            }
+          >
+            <EmailSetupShareCard
+              emailAddress={emailSetupShareEmail}
+              mailSettings={emailConfig.mailClientSettings}
+              compact
+            />
+          </Modal>
+        )}
 
       {modalMode === "disable" && selectedUser && (
         <Modal

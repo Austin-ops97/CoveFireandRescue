@@ -17,11 +17,14 @@ async function readApiError(response: Response): Promise<string> {
   return `Request failed (${response.status})`;
 }
 
+import type { MailClientSettings } from "@/lib/email-provisioning/mail-settings";
+
 export type EmailProvisioningConfig = {
   configured: boolean;
   domain: string | null;
   quotaOptions: Array<{ value: number; label: string }>;
   supportsUnlimited: boolean;
+  mailClientSettings: MailClientSettings | null;
 };
 
 export type DepartmentEmailSuggestion = {
