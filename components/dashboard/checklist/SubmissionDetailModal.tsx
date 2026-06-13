@@ -1,14 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/site/Button";
 import { Modal } from "@/components/ui/Modal";
+import { AcknowledgeReviewForm } from "@/components/dashboard/checklist/AcknowledgeReviewForm";
 import { FleetUnitReference } from "@/components/dashboard/checklist/FleetUnitReference";
 import { PhotoGallery } from "@/components/dashboard/checklist/PhotoGallery";
+import { SubmissionReviewStatus } from "@/components/dashboard/checklist/SubmissionReviewStatus";
+import { acknowledgeChecklistReview } from "@/lib/checklist/client";
 import {
   answerNeedsAttention,
   findTemplateField,
   getAttentionAnswers,
+  submissionHadFlaggedAnswers,
   submissionHasAttentionItems,
+  submissionNeedsReview,
   type ChecklistSubmissionRecord,
   type ChecklistTemplateRecord,
 } from "@/lib/checklist/types";
@@ -44,18 +50,23 @@ type SubmissionDetailModalProps = {
   fleetUnitsById?: Map<string, FleetUnitRecord>;
   isAdmin?: boolean;
   onClose: () => void;
+  onSubmissionUpdated?: (submission: ChecklistSubmissionRecord) => void;
 };
 
 export function SubmissionDetailModal({
-  submission,
+  submission: initialSubmission,
   template,
   resolvedPhotos,
   fleetUnitsById,
   isAdmin = false,
   onClose,
+  onSubmissionUpdated,
 }: SubmissionDetailModalProps) {
+  const [submission, setSubmission] = useState(initialSubmission);
+
   const attentionItems = getAttentionAnswers(submission, template);
-  const hasAttention = submissionHasAttentionItems(submission, template);
+  const hadFlags = submissionHasAttentionItems(submission, template);
+  const needsReview = submissionNeedsReview(submission, template);
 
   const answersBySection = new Map<string, typeof submission.answers>();
   for (const answer of submission.answers) {
@@ -74,6 +85,12 @@ export function SubmissionDetailModal({
     submission.submittedByName,
   ].filter(Boolean);
 
+  async function handleAcknowledgeReview(reviewNote: string) {
+    const updated = await acknowledgeChecklistReview(submission.id, reviewNote);
+    setSubmission(updated);
+    onSubmissionUpdated?.(updated);
+  }
+
   return (
     <Modal
       title={submission.templateName}
@@ -86,6 +103,10 @@ export function SubmissionDetailModal({
         </Button>
       }
     >
+      <div className="mb-4">
+        <SubmissionReviewStatus submission={submission} template={template} />
+      </div>
+
       {(submission.relatedFleetUnitId || submission.relatedFleetUnitName) && (
         <div className="mb-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-gray">
@@ -102,7 +123,13 @@ export function SubmissionDetailModal({
         </div>
       )}
 
-      {hasAttention && attentionItems.length > 0 && (
+      {isAdmin && needsReview && (
+        <div className="mb-4">
+          <AcknowledgeReviewForm onSubmit={handleAcknowledgeReview} />
+        </div>
+      )}
+
+      {hadFlags && attentionItems.length > 0 && (
         <div className="rounded-lg border border-red-200/80 bg-red-50/80 p-4">
           <p className="text-sm font-semibold text-red-950">Items needing attention</p>
           <ul className="mt-2 space-y-1.5 text-sm text-red-900">

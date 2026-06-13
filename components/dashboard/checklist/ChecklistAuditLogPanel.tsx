@@ -14,6 +14,7 @@ const ACTION_LABELS: Record<string, string> = {
   "checklist.submission.restored": "Submission restored",
   "checklist.submission.purged": "Submission permanently deleted",
   "checklist.notification.acknowledged": "Notification acknowledged",
+  "checklist.submission.review_acknowledged": "Submission review acknowledged",
 };
 
 function formatTimestamp(value: unknown): string {

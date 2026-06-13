@@ -1,3 +1,5 @@
+import type { SubmissionReviewFilter } from "@/lib/checklist/types";
+
 const HISTORY_PREFS_KEY = "cove-checklist-history-prefs-v1";
 const REVIEW_PREFS_KEY = "cove-checklist-review-prefs-v1";
 
@@ -10,6 +12,7 @@ export type ExplorerPreferences = {
   toDate: string;
   search: string;
   attentionOnly: boolean;
+  reviewFilter: SubmissionReviewFilter;
   sortOrder: "newest" | "oldest";
 };
 
@@ -22,6 +25,7 @@ const defaultPreferences: ExplorerPreferences = {
   toDate: "",
   search: "",
   attentionOnly: false,
+  reviewFilter: "all",
   sortOrder: "newest",
 };
 
@@ -37,7 +41,11 @@ export function loadExplorerPreferences(mode: "history" | "review"): ExplorerPre
     if (!raw) return { ...defaultPreferences };
 
     const parsed = JSON.parse(raw) as Partial<ExplorerPreferences>;
-    return { ...defaultPreferences, ...parsed };
+    return {
+      ...defaultPreferences,
+      ...parsed,
+      reviewFilter: parsed.reviewFilter ?? (parsed.attentionOnly ? "needs_review" : "all"),
+    };
   } catch {
     return { ...defaultPreferences };
   }

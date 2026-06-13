@@ -12,7 +12,7 @@ import {
   serializeChecklistSubmissionDoc,
   serializeChecklistTemplateDoc,
   sortSubmissionsNewestFirst,
-  submissionHasAttentionItems,
+  submissionNeedsReview,
 } from "@/lib/checklist/server";
 import type { ChecklistTemplateRecord } from "@/lib/checklist/types";
 import {
@@ -96,7 +96,7 @@ async function buildAdminSummary(): Promise<DashboardSummaryAdmin> {
   );
 
   const failedSubmissions = submissions.filter((item) =>
-    submissionHasAttentionItems(item, templateMap.get(item.templateId))
+    submissionNeedsReview(item, templateMap.get(item.templateId))
   );
 
   const trainingRecordCount = trainingSnapshot.docs.length;
@@ -118,7 +118,7 @@ async function buildAdminSummary(): Promise<DashboardSummaryAdmin> {
     recentSubmissions: submissions.slice(0, RECENT_LIST_LIMIT).map((item) =>
       toDashboardRecentSubmission(
         item,
-        submissionHasAttentionItems(item, templateMap.get(item.templateId))
+        submissionNeedsReview(item, templateMap.get(item.templateId))
       )
     ),
   };
@@ -150,7 +150,7 @@ async function buildMemberSummary(user: VerifiedServerUser): Promise<DashboardSu
   );
 
   const myFailedSubmissions = mySubmissions.filter((item) =>
-    submissionHasAttentionItems(item, templateMap.get(item.templateId))
+    submissionNeedsReview(item, templateMap.get(item.templateId))
   );
 
   return {
@@ -161,7 +161,7 @@ async function buildMemberSummary(user: VerifiedServerUser): Promise<DashboardSu
     recentSubmissions: mySubmissions.slice(0, RECENT_LIST_LIMIT).map((item) =>
       toDashboardRecentSubmission(
         item,
-        submissionHasAttentionItems(item, templateMap.get(item.templateId))
+        submissionNeedsReview(item, templateMap.get(item.templateId))
       )
     ),
   };

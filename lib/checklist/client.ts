@@ -7,6 +7,7 @@ import type {
   ChecklistTemplateFormState,
   ChecklistTemplateRecord,
   ChecklistTemplateScope,
+  SubmissionReviewFilter,
 } from "@/lib/checklist/types";
 
 async function readApiError(response: Response): Promise<string> {
@@ -135,6 +136,7 @@ export type ChecklistSubmissionQuery = {
   search?: string;
   attentionOnly?: boolean;
   deletedOnly?: boolean;
+  reviewFilter?: SubmissionReviewFilter;
 };
 
 export async function fetchChecklistSubmissions(
@@ -150,6 +152,9 @@ export async function fetchChecklistSubmissions(
   if (query.search) params.set("search", query.search);
   if (query.attentionOnly) params.set("attentionOnly", "true");
   if (query.deletedOnly) params.set("deletedOnly", "true");
+  if (query.reviewFilter && query.reviewFilter !== "all") {
+    params.set("reviewFilter", query.reviewFilter);
+  }
 
   const qs = params.toString();
   const response = await authenticatedFetch(
@@ -204,4 +209,29 @@ export async function purgeChecklistSubmission(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error(await readApiError(response));
   }
+}
+
+export async function acknowledgeChecklistReview(
+  id: string,
+  reviewNote?: string
+): Promise<ChecklistSubmissionRecord> {
+  const response = await authenticatedFetch(
+    `/api/checklist-submissions/${encodeURIComponent(id)}/acknowledge-review`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reviewNote: reviewNote?.trim() || undefined }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+
+  const data = (await response.json()) as { submission?: ChecklistSubmissionRecord };
+  if (!data.submission) {
+    throw new Error("Server did not return the updated submission.");
+  }
+
+  return data.submission;
 }

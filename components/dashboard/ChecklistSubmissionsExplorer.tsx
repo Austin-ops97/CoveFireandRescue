@@ -16,12 +16,16 @@ import { FleetUnitReference } from "@/components/dashboard/checklist/FleetUnitRe
 import { PhotoGallery } from "@/components/dashboard/checklist/PhotoGallery";
 import { SubmissionDetailModal } from "@/components/dashboard/checklist/SubmissionDetailModal";
 import { DeleteSubmissionModal } from "@/components/dashboard/checklist/DeleteSubmissionModal";
+import { SubmissionReviewStatus } from "@/components/dashboard/checklist/SubmissionReviewStatus";
+import { AcknowledgeReviewForm } from "@/components/dashboard/checklist/AcknowledgeReviewForm";
 import { useAuth } from "@/hooks/useAuth";
 import {
   fetchActiveChecklistTemplates,
   fetchAdminChecklistTemplates,
   fetchChecklistSubmissions,
   deleteChecklistSubmission,
+  restoreChecklistSubmission,
+  acknowledgeChecklistReview,
 } from "@/lib/checklist/client";
 import {
   getQuickFilterDates,
@@ -32,10 +36,11 @@ import {
 import {
   CHECKLIST_SCOPES,
   getChecklistScopeLabel,
-  submissionHasAttentionItems,
+  submissionNeedsReview,
   type ChecklistSubmissionRecord,
   type ChecklistTemplateRecord,
   type ChecklistTemplateScope,
+  type SubmissionReviewFilter,
 } from "@/lib/checklist/types";
 import { fetchAdminFleet } from "@/lib/fleet/client";
 import type { FleetUnitRecord } from "@/lib/fleet/types";
@@ -97,8 +102,11 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [search, setSearch] = useState("");
-  const [attentionOnly, setAttentionOnly] = useState(isReview);
+  const [reviewFilter, setReviewFilter] = useState<SubmissionReviewFilter>(
+    isReview ? "needs_review" : "all"
+  );
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [expandedAcknowledgeId, setExpandedAcknowledgeId] = useState<string | null>(null);
 
   useEffect(() => {
     const prefs = loadExplorerPreferences(mode);
@@ -109,7 +117,9 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
     setFromDate(prefs.fromDate);
     setToDate(prefs.toDate);
     setSearch(prefs.search);
-    setAttentionOnly(isReview ? prefs.attentionOnly || true : prefs.attentionOnly);
+    setReviewFilter(
+      prefs.reviewFilter ?? (isReview ? "needs_review" : "all")
+    );
     setSortOrder(prefs.sortOrder);
     setPrefsLoaded(true);
   }, [mode, isReview]);
@@ -125,7 +135,8 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
       fromDate,
       toDate,
       search,
-      attentionOnly,
+      attentionOnly: reviewFilter === "needs_review",
+      reviewFilter,
       sortOrder,
     };
     saveExplorerPreferences(mode, prefs);
@@ -139,7 +150,7 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
     fromDate,
     toDate,
     search,
-    attentionOnly,
+    reviewFilter,
     sortOrder,
   ]);
 
@@ -193,7 +204,7 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
           search: search || undefined,
-          attentionOnly: attentionOnly || undefined,
+          reviewFilter: reviewFilter !== "all" ? reviewFilter : undefined,
         }),
         isAdmin
           ? fetchAdminFleet().catch(() => [] as FleetUnitRecord[])
@@ -233,7 +244,7 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
     fromDate,
     toDate,
     search,
-    attentionOnly,
+    reviewFilter,
     isAdmin,
   ]);
 
@@ -266,6 +277,29 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
       );
     } finally {
       setDeleting(false);
+    }
+  }
+
+  function handleSubmissionUpdated(updated: ChecklistSubmissionRecord) {
+    setSubmissions((prev) =>
+      prev.map((item) => (item.id === updated.id ? updated : item))
+    );
+    setSelectedSubmission(updated);
+    if (reviewFilter === "needs_review" && updated.reviewStatus === "acknowledged") {
+      setSubmissions((prev) => prev.filter((item) => item.id !== updated.id));
+    }
+    setExpandedAcknowledgeId(null);
+  }
+
+  async function handleRestoreSubmission(submission: ChecklistSubmissionRecord) {
+    try {
+      const restored = await restoreChecklistSubmission(submission.id);
+      setSubmissions((prev) => prev.filter((item) => item.id !== submission.id));
+      if (selectedSubmission?.id === submission.id) {
+        setSelectedSubmission(restored);
+      }
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Failed to restore submission.");
     }
   }
 
@@ -453,7 +487,7 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
               </select>
             </div>
           )}
-          <div className={isAdmin ? "" : "sm:col-span-2"}>
+          <div className={isAdmin ? "sm:col-span-2" : "sm:col-span-2"}>
             <label className="block text-sm font-semibold text-brand-charcoal">Search</label>
             <input
               type="search"
@@ -463,17 +497,22 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
               className={inputClassName}
             />
           </div>
+          <div>
+            <label className="block text-sm font-semibold text-brand-charcoal">Review status</label>
+            <select
+              value={reviewFilter}
+              onChange={(event) =>
+                setReviewFilter(event.target.value as SubmissionReviewFilter)
+              }
+              className={inputClassName}
+            >
+              <option value="all">All</option>
+              <option value="needs_review">Needs Review</option>
+              <option value="reviewed">Reviewed</option>
+              {isAdmin && <option value="deleted">Deleted / Trash</option>}
+            </select>
+          </div>
         </div>
-
-        <label className="mt-4 inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-brand-charcoal">
-          <input
-            type="checkbox"
-            checked={attentionOnly}
-            onChange={(event) => setAttentionOnly(event.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-brand-red focus:ring-brand-red"
-          />
-          Show items needing attention only (fail / no)
-        </label>
 
         <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => void loadSubmissions()}>
           Apply filters
@@ -505,7 +544,8 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
         !loadError &&
         displayedSubmissions.map((submission) => {
           const template = templateMap.get(submission.templateId) ?? null;
-          const hasAttention = submissionHasAttentionItems(submission, template);
+          const needsReview = submissionNeedsReview(submission, template);
+          const isDeletedView = reviewFilter === "deleted";
           const submissionPhotoIds = [
             ...submission.photoFileIds,
             ...submission.answers.flatMap((answer) => answer.photoFileIds ?? []),
@@ -515,20 +555,22 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
             <Card
               key={submission.id}
               className={
-                hasAttention ? "border-l-4 border-l-brand-red" : "border-l-4 border-l-green-600"
+                needsReview
+                  ? "border-l-4 border-l-brand-red"
+                  : isDeletedView
+                    ? "border-l-4 border-l-gray-400 opacity-90"
+                    : "border-l-4 border-l-green-600"
               }
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <StatusBadge
-                      label={hasAttention ? "Needs attention" : "Clear"}
-                      variant={hasAttention ? "attention" : "pass"}
-                    />
+                    <SubmissionReviewStatus submission={submission} template={template} />
                     <StatusBadge
                       label={getChecklistScopeLabel(submission.scope)}
                       variant="neutral"
                     />
+                    {isDeletedView && <StatusBadge label="Deleted" variant="neutral" />}
                   </div>
                   <h3 className="mt-2 text-lg font-bold text-brand-charcoal">
                     {submission.templateName}
@@ -557,6 +599,20 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
                       />
                     </div>
                   )}
+                  {isAdmin && needsReview && expandedAcknowledgeId === submission.id && (
+                    <div className="mt-3 max-w-lg">
+                      <AcknowledgeReviewForm
+                        compact
+                        onSubmit={async (reviewNote) => {
+                          const updated = await acknowledgeChecklistReview(
+                            submission.id,
+                            reviewNote
+                          );
+                          handleSubmissionUpdated(updated);
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Button
@@ -567,7 +623,31 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
                   >
                     View details
                   </Button>
-                  {isAdmin && (
+                  {isAdmin && needsReview && (
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={() =>
+                        setExpandedAcknowledgeId((current) =>
+                          current === submission.id ? null : submission.id
+                        )
+                      }
+                    >
+                      Acknowledge Review
+                    </Button>
+                  )}
+                  {isAdmin && isDeletedView && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handleRestoreSubmission(submission)}
+                    >
+                      Restore
+                    </Button>
+                  )}
+                  {isAdmin && !isDeletedView && (
                     <Button
                       type="button"
                       variant="outline"
@@ -592,6 +672,7 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
           fleetUnitsById={fleetUnitsById}
           isAdmin={isAdmin}
           onClose={() => setSelectedSubmission(null)}
+          onSubmissionUpdated={handleSubmissionUpdated}
         />
       )}
 

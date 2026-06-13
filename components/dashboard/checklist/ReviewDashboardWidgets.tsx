@@ -3,7 +3,7 @@
 import { Card } from "@/components/site/Card";
 import {
   getAttentionAnswers,
-  submissionHasAttentionItems,
+  submissionNeedsReview,
   type ChecklistSubmissionRecord,
   type ChecklistTemplateRecord,
 } from "@/lib/checklist/types";
@@ -32,7 +32,7 @@ export function ReviewDashboardWidgets({
   const totalInspections = submissions.length;
   const withFailures = submissions.filter((submission) => {
     const template = templateMap.get(submission.templateId) ?? null;
-    return submissionHasAttentionItems(submission, template);
+    return submissionNeedsReview(submission, template);
   }).length;
   const withPhotos = submissions.filter(
     (submission) =>
@@ -45,8 +45,8 @@ export function ReviewDashboardWidgets({
 
   for (const submission of submissions) {
     const template = templateMap.get(submission.templateId) ?? null;
+    if (!submissionNeedsReview(submission, template)) continue;
     const attentionItems = getAttentionAnswers(submission, template);
-    if (attentionItems.length === 0) continue;
 
     const unitKey = submission.relatedFleetUnitName ?? "No fleet unit";
     const unitMap = failureByUnit.get(unitKey) ?? new Map<string, number>();
@@ -76,7 +76,7 @@ export function ReviewDashboardWidgets({
         </Card>
         <Card>
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-gray">
-            With failures
+            Needs review
           </p>
           <p className="mt-1 text-2xl font-bold text-brand-red">{withFailures}</p>
         </Card>

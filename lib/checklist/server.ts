@@ -3,7 +3,10 @@ import "server-only";
 import { Timestamp, type DocumentSnapshot } from "firebase-admin/firestore";
 import {
   getAllTemplateFields,
+  submissionHadFlaggedAnswers,
   submissionHasAttentionItems,
+  submissionIsReviewAcknowledged,
+  submissionNeedsReview,
   type ChecklistFieldType,
   type ChecklistSubmissionAnswer,
   type ChecklistSubmissionRecord,
@@ -219,6 +222,22 @@ export function serializeChecklistSubmissionDoc(
     isDeleted: data.isDeleted === true,
     deletedAt: data.deletedAt ? serializeTimestamp(data.deletedAt) : data.deletedAt === null ? null : undefined,
     deletedBy: typeof data.deletedBy === "string" ? data.deletedBy : data.deletedBy === null ? null : undefined,
+    needsAttention: data.needsAttention === true,
+    reviewStatus:
+      data.reviewStatus === "pending" || data.reviewStatus === "acknowledged"
+        ? data.reviewStatus
+        : null,
+    reviewedAt: data.reviewedAt ? serializeTimestamp(data.reviewedAt) : data.reviewedAt === null ? null : undefined,
+    reviewedBy:
+      typeof data.reviewedBy === "string" ? data.reviewedBy : data.reviewedBy === null ? null : undefined,
+    reviewedByName:
+      typeof data.reviewedByName === "string"
+        ? data.reviewedByName
+        : data.reviewedByName === null
+          ? null
+          : undefined,
+    reviewNote:
+      typeof data.reviewNote === "string" ? data.reviewNote : data.reviewNote === null ? null : undefined,
   };
 }
 
@@ -756,6 +775,7 @@ export type SubmissionFilterParams = {
   toDate?: string;
   search?: string;
   attentionOnly?: boolean;
+  reviewFilter?: "all" | "needs_review" | "reviewed" | "deleted";
   deletedOnly?: boolean;
   includeDeleted?: boolean;
 };
@@ -772,10 +792,20 @@ export function filterSubmissions(
   return submissions.filter((submission) => {
     const isDeleted = submission.isDeleted === true;
 
-    if (filters.deletedOnly) {
+    const reviewFilter = filters.reviewFilter ?? (filters.deletedOnly ? "deleted" : "all");
+
+    if (reviewFilter === "deleted" || filters.deletedOnly) {
       if (!isDeleted) return false;
     } else if (!filters.includeDeleted && isDeleted) {
       return false;
+    }
+
+    const template = templatesById?.get(submission.templateId);
+
+    if (reviewFilter === "needs_review" || filters.attentionOnly) {
+      if (!submissionNeedsReview(submission, template)) return false;
+    } else if (reviewFilter === "reviewed") {
+      if (!submissionIsReviewAcknowledged(submission)) return false;
     }
 
     if (filters.templateId && submission.templateId !== filters.templateId) return false;
@@ -795,11 +825,6 @@ export function filterSubmissions(
       if (submittedMs > endOfDay) return false;
     }
 
-    if (filters.attentionOnly) {
-      const template = templatesById?.get(submission.templateId);
-      if (!submissionHasAttentionItems(submission, template)) return false;
-    }
-
     if (search) {
       const haystack = [
         submission.templateName,
@@ -817,4 +842,9 @@ export function filterSubmissions(
   });
 }
 
-export { submissionHasAttentionItems };
+export {
+  submissionHadFlaggedAnswers,
+  submissionHasAttentionItems,
+  submissionIsReviewAcknowledged,
+  submissionNeedsReview,
+};

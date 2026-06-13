@@ -65,7 +65,17 @@ export type ChecklistSubmissionRecord = {
   isDeleted?: boolean;
   deletedAt?: unknown | null;
   deletedBy?: string | null;
+  needsAttention?: boolean;
+  reviewStatus?: ChecklistReviewStatus | null;
+  reviewedAt?: unknown | null;
+  reviewedBy?: string | null;
+  reviewedByName?: string | null;
+  reviewNote?: string | null;
 };
+
+export type ChecklistReviewStatus = "pending" | "acknowledged";
+
+export type SubmissionReviewFilter = "all" | "needs_review" | "reviewed" | "deleted";
 
 export type ChecklistNotificationStatus = "unread" | "acknowledged" | "submission_deleted";
 
@@ -186,6 +196,33 @@ export function submissionHasAttentionItems(
     if (!match) return false;
     return answerNeedsAttention(match.field, answer.value);
   });
+}
+
+/** Whether the submission originally had flagged answers (ignores review acknowledgement). */
+export function submissionHadFlaggedAnswers(
+  submission: ChecklistSubmissionRecord,
+  template?: ChecklistTemplateRecord | null
+): boolean {
+  if (typeof submission.needsAttention === "boolean") {
+    return submission.needsAttention;
+  }
+  return submissionHasAttentionItems(submission, template);
+}
+
+export function submissionIsReviewAcknowledged(
+  submission: ChecklistSubmissionRecord
+): boolean {
+  return submission.reviewStatus === "acknowledged";
+}
+
+/** Active review queue: flagged, not deleted, not yet acknowledged. */
+export function submissionNeedsReview(
+  submission: ChecklistSubmissionRecord,
+  template?: ChecklistTemplateRecord | null
+): boolean {
+  if (submission.isDeleted) return false;
+  if (submission.reviewStatus === "acknowledged") return false;
+  return submissionHadFlaggedAnswers(submission, template);
 }
 
 export function getAttentionAnswers(

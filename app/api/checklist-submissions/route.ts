@@ -20,9 +20,14 @@ import {
   serializeChecklistTemplateDoc,
   sortSubmissionsNewestFirst,
   stripUndefinedDeep,
+  submissionHasAttentionItems,
   validateChecklistSubmissionPayload,
 } from "@/lib/checklist/server";
-import type { ChecklistSubmissionPayload, ChecklistTemplateScope } from "@/lib/checklist/types";
+import type {
+  ChecklistSubmissionPayload,
+  ChecklistTemplateScope,
+  SubmissionReviewFilter,
+} from "@/lib/checklist/types";
 
 function badRequest(message: string): Response {
   return NextResponse.json({ error: message }, { status: 400 });
@@ -104,10 +109,28 @@ export async function GET(request: Request) {
         : undefined;
 
     const deletedOnly = searchParams.get("deletedOnly") === "true";
+    const reviewFilterParam = searchParams.get("reviewFilter")?.trim();
 
-    if (deletedOnly && user.role !== "admin") {
+    const reviewFilter: SubmissionReviewFilter | undefined =
+      reviewFilterParam === "needs_review" ||
+      reviewFilterParam === "reviewed" ||
+      reviewFilterParam === "deleted"
+        ? reviewFilterParam
+        : deletedOnly
+          ? "deleted"
+          : undefined;
+
+    if ((reviewFilter === "deleted" || deletedOnly) && user.role !== "admin") {
       throw new ServerAuthError(403, "insufficient_role", "Insufficient permissions.");
     }
+
+    const templateSnapshot = await adminDb.collection(COLLECTIONS.checklistTemplates).limit(200).get();
+    const templatesById = new Map(
+      templateSnapshot.docs.map((doc) => {
+        const template = serializeChecklistTemplateDoc(doc);
+        return [template.id, template] as const;
+      })
+    );
 
     const filters = {
       templateId: searchParams.get("templateId")?.trim() || undefined,
@@ -121,10 +144,11 @@ export async function GET(request: Request) {
       toDate: searchParams.get("toDate")?.trim() || undefined,
       search: searchParams.get("search")?.trim() || undefined,
       attentionOnly: searchParams.get("attentionOnly") === "true",
+      reviewFilter,
       deletedOnly,
     };
 
-    submissions = filterSubmissions(submissions, filters).slice(0, 200);
+    submissions = filterSubmissions(submissions, filters, templatesById).slice(0, 200);
 
     return NextResponse.json({ submissions });
   } catch (error) {
@@ -175,6 +199,19 @@ export async function POST(request: Request) {
     }
 
     const docRef = adminDb.collection(COLLECTIONS.checklistSubmissions).doc();
+    const hasAttention = submissionHasAttentionItems(
+      {
+        id: docRef.id,
+        templateId: template.id,
+        templateName: template.name,
+        scope: template.scope,
+        submittedBy: actor.uid,
+        answers: validated.answers,
+        photoFileIds: validated.photoFileIds,
+      },
+      template
+    );
+
     const writeData: Record<string, unknown> = {
       templateId: template.id,
       templateName: template.name,
@@ -188,6 +225,8 @@ export async function POST(request: Request) {
       photoFileIds: validated.photoFileIds,
       submittedAt: FieldValue.serverTimestamp(),
       isDeleted: false,
+      needsAttention: hasAttention,
+      reviewStatus: hasAttention ? "pending" : null,
     };
 
     await docRef.set(writeData);

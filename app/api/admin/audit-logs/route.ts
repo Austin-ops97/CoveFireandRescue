@@ -14,6 +14,7 @@ const CHECKLIST_AUDIT_ACTIONS: AuditAction[] = [
   "checklist.submission.restored",
   "checklist.submission.purged",
   "checklist.notification.acknowledged",
+  "checklist.submission.review_acknowledged",
 ];
 
 function serializeTimestamp(value: unknown): unknown {
