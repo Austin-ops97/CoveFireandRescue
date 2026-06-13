@@ -43,6 +43,7 @@ export type AuditAction =
   | "fleet.created"
   | "fleet.updated"
   | "fleet.archived"
+  | "fleet.deleted"
   | "leadership.created"
   | "leadership.updated"
   | "leadership.archived";

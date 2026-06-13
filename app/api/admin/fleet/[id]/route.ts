@@ -1,4 +1,3 @@
-import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/audit/server";
 import { serializeFleetDoc } from "@/lib/fleet/server";
@@ -28,22 +27,15 @@ export async function DELETE(request: Request, context: RouteContext) {
 
     const previous = serializeFleetDoc(existing);
 
-    await docRef.set(
-      {
-        status: "archived",
-        active: false,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+    await docRef.delete();
 
     await writeAuditLog({
-      action: "fleet.archived",
+      action: "fleet.deleted",
       actorUid: actor.uid,
       actorRole: actor.role!,
       targetType: "fleet",
       targetId: id.trim(),
-      message: `Archived fleet unit "${previous.name}" via delete action`,
+      message: `Permanently deleted fleet unit "${previous.name}"`,
     });
 
     return NextResponse.json({ ok: true });

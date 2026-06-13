@@ -59,7 +59,36 @@ export async function saveFleetUnit(payload: FleetUnitFormState): Promise<FleetU
   return data.fleetUnit;
 }
 
-export async function archiveFleetUnit(id: string): Promise<void> {
+function fleetRecordToArchivePayload(record: FleetUnitRecord): FleetUnitFormState {
+  return {
+    id: record.id,
+    name: record.name,
+    unitNumber: record.unitNumber,
+    type: record.type,
+    year: record.year,
+    manufacturer: record.manufacturer,
+    model: record.model ?? "",
+    pumpCapacityGpm:
+      record.pumpCapacityGpm !== null && record.pumpCapacityGpm !== undefined
+        ? String(record.pumpCapacityGpm)
+        : "",
+    waterCapacityGallons:
+      record.waterCapacityGallons !== null && record.waterCapacityGallons !== undefined
+        ? String(record.waterCapacityGallons)
+        : "",
+    equipmentNotes: record.equipmentNotes,
+    imageFileIds: record.imageFileIds,
+    status: "archived",
+    active: false,
+    sortOrder: String(record.sortOrder),
+  };
+}
+
+export async function archiveFleetUnit(record: FleetUnitRecord): Promise<FleetUnitRecord> {
+  return saveFleetUnit(fleetRecordToArchivePayload(record));
+}
+
+export async function deleteFleetUnit(id: string): Promise<void> {
   const response = await authenticatedFetch(`/api/admin/fleet/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });

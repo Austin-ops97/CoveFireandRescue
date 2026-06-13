@@ -16,6 +16,7 @@ import {
 import { inputBase } from "@/lib/ui/classes";
 import {
   archiveFleetUnit,
+  deleteFleetUnit,
   fetchAdminFleet,
   saveFleetUnit,
 } from "@/lib/fleet/client";
@@ -108,6 +109,7 @@ export function FleetManager() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [archivingId, setArchivingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -308,24 +310,51 @@ export function FleetManager() {
     }
   }
 
-  async function handleArchive(id: string, name: string) {
-    if (!window.confirm(`Archive "${name}"? It will be removed from the public fleet page.`)) {
+  async function handleArchive(record: FleetUnitRecord) {
+    if (
+      !window.confirm(
+        `Archive "${record.name}"? It will be removed from the public fleet page but kept in the admin list.`
+      )
+    ) {
       return;
     }
 
-    setArchivingId(id);
+    setArchivingId(record.id);
     setSaveError(null);
     setSuccessMessage(null);
 
     try {
-      await archiveFleetUnit(id);
+      await archiveFleetUnit(record);
       await loadFleet(true);
-      if (editingId === id) resetForm();
-      setSuccessMessage(`Archived "${name}".`);
+      if (editingId === record.id) resetForm();
+      setSuccessMessage(`Archived "${record.name}".`);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Failed to archive fleet unit.");
     } finally {
       setArchivingId(null);
+    }
+  }
+
+  async function handleDelete(record: FleetUnitRecord) {
+    if (
+      !window.confirm(`Permanently delete "${record.name}"? This cannot be undone.`)
+    ) {
+      return;
+    }
+
+    setDeletingId(record.id);
+    setSaveError(null);
+    setSuccessMessage(null);
+
+    try {
+      await deleteFleetUnit(record.id);
+      await loadFleet(true);
+      if (editingId === record.id) resetForm();
+      setSuccessMessage(`Deleted "${record.name}".`);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Failed to delete fleet unit.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -710,12 +739,22 @@ export function FleetManager() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        disabled={archivingId === item.id}
-                        onClick={() => void handleArchive(item.id, item.name)}
+                        disabled={archivingId === item.id || deletingId === item.id}
+                        onClick={() => void handleArchive(item)}
                       >
                         {archivingId === item.id ? "Archiving…" : "Archive"}
                       </Button>
                     )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="border-red-200 text-red-700 hover:bg-red-50"
+                      disabled={archivingId === item.id || deletingId === item.id}
+                      onClick={() => void handleDelete(item)}
+                    >
+                      {deletingId === item.id ? "Deleting…" : "Delete"}
+                    </Button>
                   </div>
                 </div>
               </Card>
