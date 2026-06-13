@@ -11,6 +11,8 @@ Digital rounds and inspection checklists for Cove Fire & Rescue. Templates are b
 5. Mark templates **Active** and **Reusable** so members can select them when submitting.
 6. **Archive** templates that should no longer accept new submissions (soft-delete: `active: false`).
 
+Templates are saved through `POST /api/admin/checklist-templates` (admin or editor). The server validates the full template shape and strips unsupported values before writing to Firestore.
+
 Field types: pass/fail, pass/fail/N/A, yes/no, checkbox, text, number, select, photo, signature (typed name).
 
 ## Submission workflow
