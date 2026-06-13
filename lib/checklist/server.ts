@@ -301,15 +301,39 @@ function validateTemplateField(field: unknown, sectionIndex: number, fieldIndex:
     }
   }
 
-  return {
+  const validatedField: ChecklistTemplateField = {
     id: payload.id.trim(),
     label,
     type: fieldType,
     required: payload.required,
     sortOrder: parseSortOrder(payload.sortOrder),
-    options,
     helpText,
   };
+
+  if (options && options.length > 0) {
+    validatedField.options = options;
+  }
+
+  return validatedField;
+}
+
+/** Firestore rejects undefined anywhere in nested objects; strip before writes. */
+export function stripUndefinedDeep<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripUndefinedDeep(item)) as T;
+  }
+
+  if (value !== null && typeof value === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      if (entry !== undefined) {
+        result[key] = stripUndefinedDeep(entry);
+      }
+    }
+    return result as T;
+  }
+
+  return value;
 }
 
 function validateTemplateSection(section: unknown, index: number): ChecklistTemplateSection {

@@ -5,11 +5,13 @@ import {
   ChecklistValidationError,
   serializeChecklistTemplateDoc,
   sortTemplatesForAdmin,
+  stripUndefinedDeep,
   validateChecklistTemplatePayload,
 } from "@/lib/checklist/server";
 import type { ChecklistTemplateFormState } from "@/lib/checklist/types";
 import {
   requireManageContent,
+  ServerAuthError,
   serverAuthErrorResponse,
   type VerifiedServerUser,
 } from "@/lib/auth/server";
@@ -20,6 +22,39 @@ type PostBody = ChecklistTemplateFormState;
 
 function badRequest(message: string): Response {
   return NextResponse.json({ error: message }, { status: 400 });
+}
+
+function handleChecklistTemplateRouteError(error: unknown, context: string): Response {
+  if (error instanceof ServerAuthError) {
+    return serverAuthErrorResponse(error);
+  }
+
+  if (error instanceof ChecklistValidationError) {
+    return badRequest(error.message);
+  }
+
+  console.error(`${context}:`, error);
+
+  if (error instanceof Error && error.message.trim()) {
+    const message = error.message.toLowerCase();
+    if (message.includes("undefined") && message.includes("firestore")) {
+      return NextResponse.json(
+        {
+          error: "Template data contained invalid values. Please review fields and try again.",
+          code: "invalid_template_data",
+        },
+        { status: 400 }
+      );
+    }
+  }
+
+  return NextResponse.json(
+    {
+      error: "Failed to save checklist template. Please try again.",
+      code: "save_failed",
+    },
+    { status: 500 }
+  );
 }
 
 async function writeTemplateAudit(
@@ -50,7 +85,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ templates });
   } catch (error) {
-    return serverAuthErrorResponse(error);
+    return handleChecklistTemplateRouteError(error, "GET /api/admin/checklist-templates");
   }
 }
 
@@ -94,8 +129,9 @@ export async function POST(request: Request) {
         active: validated.active,
         reusable: validated.reusable,
         sortOrder: validated.sortOrder,
-        sections: validated.sections,
+        sections: stripUndefinedDeep(validated.sections),
         updatedAt: FieldValue.serverTimestamp(),
+        updatedBy: actor.uid,
       };
 
       if (existingData.createdAt !== undefined) {
@@ -124,9 +160,11 @@ export async function POST(request: Request) {
       active: validated.active,
       reusable: validated.reusable,
       sortOrder: validated.sortOrder,
-      sections: validated.sections,
+      sections: stripUndefinedDeep(validated.sections),
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
+      createdBy: actor.uid,
+      updatedBy: actor.uid,
     };
 
     await docRef.set(writeData);
@@ -142,6 +180,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ template: saved }, { status: 201 });
   } catch (error) {
-    return serverAuthErrorResponse(error);
+    return handleChecklistTemplateRouteError(error, "POST /api/admin/checklist-templates");
   }
 }

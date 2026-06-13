@@ -336,12 +336,18 @@ export function ChecklistTemplateBuilder() {
         })),
       }));
 
-      const saved = await saveChecklistTemplate({
+      const savePayload = {
         ...form,
         name: form.name.trim(),
         description: form.description.trim(),
         sections: normalizedSections,
-      });
+      };
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("[ChecklistTemplateBuilder] submitting template:", savePayload);
+      }
+
+      const saved = await saveChecklistTemplate(savePayload);
 
       await loadTemplates(true);
       if (!editingId) {

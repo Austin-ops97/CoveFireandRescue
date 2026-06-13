@@ -47,6 +47,10 @@ export async function fetchAdminChecklistTemplates(): Promise<ChecklistTemplateR
 export async function saveChecklistTemplate(
   payload: ChecklistTemplateFormState
 ): Promise<ChecklistTemplateRecord> {
+  if (process.env.NODE_ENV === "development") {
+    console.log("[checklist-template] save payload:", payload);
+  }
+
   const response = await authenticatedFetch("/api/admin/checklist-templates", {
     method: "POST",
     headers: {
@@ -55,8 +59,16 @@ export async function saveChecklistTemplate(
     body: JSON.stringify(payload),
   });
 
+  if (process.env.NODE_ENV === "development") {
+    console.log("[checklist-template] save response:", response.status, response.statusText);
+  }
+
   if (!response.ok) {
-    throw new Error(await readApiError(response));
+    const errorMessage = await readApiError(response);
+    if (process.env.NODE_ENV === "development") {
+      console.error("[checklist-template] save failed:", errorMessage);
+    }
+    throw new Error(errorMessage);
   }
 
   const data = (await response.json()) as { template?: ChecklistTemplateRecord };
