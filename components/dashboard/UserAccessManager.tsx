@@ -15,6 +15,7 @@ import {
   SkeletonTable,
   StatusBadge,
 } from "@/components/ui";
+import { mobileActionStack, mobileDataGrid, mobileDataLabel, mobileDataValue } from "@/lib/ui/classes";
 import { USER_ROLES, roleLabel } from "@/lib/auth/roles";
 import {
   fetchDepartmentEmailSuggestion,
@@ -801,13 +802,19 @@ export function UserAccessManager() {
             {filteredUsers.map((user) => (
               <Card key={user.uid}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="font-bold text-brand-charcoal">
                       {user.displayName || "Unnamed user"}
                     </h3>
                     <p className="mt-1 text-sm text-brand-gray">
                       {getDisplayDepartmentEmail(user) || "No department email"}
                     </p>
+                    {user.isDepartmentAlias && (
+                      <p className="mt-1 text-xs text-brand-gray">Department alias</p>
+                    )}
+                    {user.isPendingAuth && (
+                      <p className="mt-1 text-xs font-medium text-amber-700">Portal setup incomplete</p>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <StatusBadge label={roleLabel(user.role)} variant={roleBadgeVariant(user.role)} />
@@ -817,17 +824,61 @@ export function UserAccessManager() {
                     />
                   </div>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
+
+                <dl className={`mt-4 ${mobileDataGrid}`}>
+                  <div>
+                    <dt className={mobileDataLabel}>Last login</dt>
+                    <dd className={mobileDataValue}>{formatTimestamp(user.lastLoginAt)}</dd>
+                  </div>
+                  <div>
+                    <dt className={mobileDataLabel}>Created</dt>
+                    <dd className={mobileDataValue}>{formatTimestamp(user.createdAt)}</dd>
+                  </div>
+                </dl>
+
+                <div className={`mt-4 border-t border-gray-100 pt-4 ${mobileActionStack}`}>
                   {!user.isDepartmentAlias && (
                     <Button type="button" variant="outline" size="sm" onClick={() => openEditModal(user)}>
                       Edit
                     </Button>
                   )}
-                  {user.isPendingAuth && (
-                    <Button type="button" variant="outline" size="sm" onClick={() => openRetryAuthModal(user)}>
-                      Retry setup
+                  {!user.isDepartmentAlias && !user.isPendingAuth && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => openResetModal(user)}>
+                      Reset portal password
                     </Button>
                   )}
+                  {user.isPendingAuth && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => openRetryAuthModal(user)}>
+                      Retry portal setup
+                    </Button>
+                  )}
+                  {user.emailProvisioningStatus === "provisioned" &&
+                    getDisplayDepartmentEmail(user) &&
+                    emailConfig?.mailClientSettings && (
+                      <Button type="button" variant="outline" size="sm" onClick={() => openEmailSetupModal(user)}>
+                        Email setup QR
+                      </Button>
+                    )}
+                  {user.emailProvisioningStatus === "provisioned" &&
+                    getDisplayDepartmentEmail(user) && (
+                      <Button type="button" variant="outline" size="sm" onClick={() => openEmailResetModal(user)}>
+                        Reset email password
+                      </Button>
+                    )}
+                  {user.active && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => openDisableModal(user)}>
+                      Disable
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-red-200 text-red-700 hover:bg-red-50"
+                    onClick={() => openDeleteModal(user)}
+                  >
+                    Delete
+                  </Button>
                 </div>
               </Card>
             ))}

@@ -103,7 +103,7 @@ export function CheckboxField({
     <div>
       <label
         htmlFor={id}
-        className="inline-flex cursor-pointer items-start gap-2.5 text-sm font-medium text-brand-charcoal"
+        className="inline-flex min-h-11 cursor-pointer items-start gap-3 text-base font-medium text-brand-charcoal sm:min-h-0 sm:gap-2.5 sm:text-sm"
       >
         <input
           id={id}

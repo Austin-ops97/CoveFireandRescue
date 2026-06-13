@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
 import { AlertBanner, EmptyState, SkeletonCardList, StatusBadge } from "@/components/ui";
+import { mobileActionStack } from "@/lib/ui/classes";
 import {
   acknowledgeChecklistNotification,
   fetchChecklistNotifications,
@@ -66,62 +67,62 @@ function NotificationCard({
             : "border-l-4 border-l-green-600"
       }
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            {isUnread && <StatusBadge label="Unread" variant="attention" />}
-            {notification.hasAttention && (
-              <StatusBadge label="Needs attention" variant="attention" />
-            )}
-            {!notification.hasAttention && isUnread && (
-              <StatusBadge label="Clear" variant="pass" />
-            )}
-            {notification.status === "acknowledged" && (
-              <StatusBadge label="Acknowledged" variant="pass" />
-            )}
-            {isDeleted && (
-              <StatusBadge label="Submission Deleted" variant="neutral" />
-            )}
-            <StatusBadge
-              label={getChecklistScopeLabel(notification.scope)}
-              variant="neutral"
-            />
-          </div>
-
-          <h3 className="mt-2 text-lg font-bold text-brand-charcoal">
-            {notification.templateName}
-          </h3>
-
-          <p className="mt-1 text-sm text-brand-gray">
-            {formatTimestamp(notification.createdAt)}
-            {notification.submittedByName ? ` · ${notification.submittedByName}` : ""}
-            {notification.relatedFleetUnitName ? ` · ${notification.relatedFleetUnitName}` : ""}
-          </p>
-
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          {isUnread && <StatusBadge label="Unread" variant="attention" />}
+          {notification.hasAttention && (
+            <StatusBadge label="Needs attention" variant="attention" />
+          )}
+          {!notification.hasAttention && isUnread && (
+            <StatusBadge label="Clear" variant="pass" />
+          )}
           {notification.status === "acknowledged" && (
-            <div className="mt-2 flex items-center gap-2 text-sm text-green-700">
-              <CheckIcon />
-              <span>
-                Acknowledged by {notification.acknowledgedByName ?? "Administrator"} on{" "}
-                {formatTimestamp(notification.acknowledgedAt)}
-              </span>
-            </div>
+            <StatusBadge label="Acknowledged" variant="pass" />
           )}
-
-          {isDeleted && notification.acknowledgedByName && (
-            <p className="mt-2 text-sm text-brand-gray">
-              Previously acknowledged by {notification.acknowledgedByName} on{" "}
-              {formatTimestamp(notification.acknowledgedAt)}
-            </p>
+          {isDeleted && (
+            <StatusBadge label="Submission Deleted" variant="neutral" />
           )}
+          <StatusBadge
+            label={getChecklistScopeLabel(notification.scope)}
+            variant="neutral"
+          />
         </div>
 
-        <div className="flex shrink-0 flex-wrap gap-2">
+        <h3 className="mt-2 text-lg font-bold text-brand-charcoal">
+          {notification.templateName}
+        </h3>
+
+        <p className="mt-1 text-sm text-brand-gray">
+          {formatTimestamp(notification.createdAt)}
+          {notification.submittedByName ? ` · ${notification.submittedByName}` : ""}
+          {notification.relatedFleetUnitName ? ` · ${notification.relatedFleetUnitName}` : ""}
+        </p>
+
+        {notification.status === "acknowledged" && (
+          <div className="mt-2 flex items-center gap-2 text-sm text-green-700">
+            <CheckIcon />
+            <span>
+              Acknowledged by {notification.acknowledgedByName ?? "Administrator"} on{" "}
+              {formatTimestamp(notification.acknowledgedAt)}
+            </span>
+          </div>
+        )}
+
+        {isDeleted && notification.acknowledgedByName && (
+          <p className="mt-2 text-sm text-brand-gray">
+            Previously acknowledged by {notification.acknowledgedByName} on{" "}
+            {formatTimestamp(notification.acknowledgedAt)}
+          </p>
+        )}
+      </div>
+
+      <div className={`mt-4 border-t border-gray-100 pt-4 ${mobileActionStack}`}>
           {isUnread && (
             <Button
               type="button"
               variant="primary"
               size="sm"
+              className="w-full sm:w-auto"
               disabled={acknowledging}
               onClick={() => onAcknowledge(notification.id)}
             >
@@ -129,15 +130,16 @@ function NotificationCard({
             </Button>
           )}
           {!isDeleted && (
-            <Link
+            <Button
               href={`/dashboard/rounds/review?submission=${encodeURIComponent(notification.submissionId)}`}
-              className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-brand-charcoal transition-colors hover:bg-gray-50"
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
             >
               View submission
-            </Link>
+            </Button>
           )}
         </div>
-      </div>
     </Card>
   );
 }
@@ -201,7 +203,7 @@ export function ChecklistNotificationsPanel() {
         </Link>
       </p>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-bold text-brand-charcoal">Checklist Notifications</h2>
           <p className="mt-1 text-sm text-brand-gray">
@@ -210,7 +212,13 @@ export function ChecklistNotificationsPanel() {
               : "All notifications acknowledged"}
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={() => void loadNotifications()}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full sm:w-auto"
+          onClick={() => void loadNotifications()}
+        >
           Refresh
         </Button>
       </div>

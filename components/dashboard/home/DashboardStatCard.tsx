@@ -22,8 +22,8 @@ export function DashboardStatCard({
 }: DashboardStatCardProps) {
   return (
     <Card variant="muted" padding="sm" className="h-full">
-      <p className="text-sm font-semibold text-brand-gray">{label}</p>
-      <p className={`mt-1 text-3xl font-bold tabular-nums ${variantClasses[variant]}`}>
+      <p className="text-base font-semibold text-brand-gray sm:text-sm">{label}</p>
+      <p className={`mt-1 text-2xl font-bold tabular-nums sm:text-3xl ${variantClasses[variant]}`}>
         {value}
       </p>
       {hint ? <p className="mt-1.5 text-xs leading-relaxed text-brand-gray">{hint}</p> : null}

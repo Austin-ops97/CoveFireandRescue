@@ -61,7 +61,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className={`max-h-[min(90vh,100dvh)] w-full overflow-y-auto rounded-t-2xl border border-gray-100 bg-white shadow-xl outline-none sm:rounded-2xl ${sizeClasses[size]}`}
+        className={`max-h-[min(90vh,100dvh)] w-full overflow-y-auto rounded-t-2xl border border-gray-100 bg-white shadow-xl outline-none safe-area-bottom sm:rounded-2xl ${sizeClasses[size]}`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-gray-100 bg-white/95 px-5 py-4 backdrop-blur-sm sm:px-6">
@@ -85,7 +85,7 @@ export function Modal({
         )}
 
         {footer && (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 px-5 py-4 sm:px-6">
+          <div className="flex flex-col gap-2 border-t border-gray-100 px-5 py-4 sticky-safe-bottom safe-area-bottom sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-2 sm:px-6 [&>*]:w-full sm:[&>*]:w-auto">
             {footer}
           </div>
         )}

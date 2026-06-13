@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/site/Button";
 import { Card } from "@/components/site/Card";
-import { AlertBanner, SkeletonForm } from "@/components/ui";
+import { AlertBanner, CollapsibleSection, MobileActionBar, SkeletonForm } from "@/components/ui";
 import {
   ChecklistFieldInput,
   defaultAnswerForField,
@@ -28,11 +28,10 @@ import {
 } from "@/lib/checklist/validate-submission";
 import { fetchPublicFleet } from "@/lib/fleet/client";
 import type { FleetUnitRecord } from "@/lib/fleet/types";
+import { inputBase } from "@/lib/ui/classes";
 import { uploadImageToB2 } from "@/lib/storage/client";
 
-const inputClassName = "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm";
-const inputErrorClassName =
-  "mt-1 w-full rounded-md border border-brand-red px-3 py-2 text-sm ring-1 ring-brand-red/30";
+const inputErrorClassName = `${inputBase} border-brand-red ring-1 ring-brand-red/30`;
 
 export function ChecklistSubmissionForm() {
   const { profile } = useAuth();
@@ -360,7 +359,7 @@ export function ChecklistSubmissionForm() {
       )}
 
       <Card>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 pb-24 md:pb-0">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="template" className="block text-sm font-semibold text-brand-charcoal">
@@ -370,7 +369,7 @@ export function ChecklistSubmissionForm() {
                 id="template"
                 value={selectedTemplateId}
                 onChange={(event) => setSelectedTemplateId(event.target.value)}
-                className={inputClassName}
+                className={inputBase}
               >
                 {templates.map((template) => (
                   <option key={template.id} value={template.id}>
@@ -395,7 +394,7 @@ export function ChecklistSubmissionForm() {
                     setRelatedFleetUnitId(event.target.value);
                     setFleetUnitError(null);
                   }}
-                  className={fleetUnitError ? inputErrorClassName : inputClassName}
+                  className={fleetUnitError ? inputErrorClassName : inputBase}
                   aria-invalid={Boolean(fleetUnitError)}
                 >
                   <option value="">Select apparatus…</option>
@@ -440,58 +439,58 @@ export function ChecklistSubmissionForm() {
             </strong>
           </p>
 
-          {selectedTemplate?.sections.map((section) => (
+          {selectedTemplate?.sections.map((section, sectionIndex) => (
             <div
               key={section.id}
               ref={(element) => {
                 sectionRefs.current[section.id] = element;
               }}
-              className="space-y-3 border-t border-gray-100 pt-4"
+              className="border-t border-gray-100 pt-4"
             >
-              <div>
-                <h3 className="text-sm font-semibold text-brand-charcoal">{section.title}</h3>
-                {section.description ? (
-                  <p className="mt-1 text-xs text-brand-gray">{section.description}</p>
-                ) : null}
-              </div>
-              <ul className="space-y-3">
-                {section.fields.map((field) => (
-                  <li
-                    key={field.id}
-                    className={`rounded-md border px-4 py-3 ${
-                      fieldErrors[field.id] ? "border-brand-red/50 bg-red-50/30" : "border-gray-200"
-                    }`}
-                  >
-                    <p className="text-sm font-medium text-brand-charcoal">
-                      {field.label}
-                      {field.required ? <span className="text-brand-red"> *</span> : null}
-                    </p>
-                    {field.helpText ? (
-                      <p className="mt-0.5 text-xs text-brand-gray">{field.helpText}</p>
-                    ) : null}
-                    <div className="mt-2">
-                      <ChecklistFieldInput
-                        field={field}
-                        sectionId={section.id}
-                        templateId={selectedTemplate.id}
-                        answer={answers[field.id] ?? defaultAnswerForField(field)}
-                        disabled={submitting}
-                        error={fieldErrors[field.id]}
-                        onChange={(next) => {
-                          setAnswers((prev) => ({ ...prev, [field.id]: next }));
-                          if (fieldErrors[field.id]) {
-                            setFieldErrors((prev) => {
-                              const nextErrors = { ...prev };
-                              delete nextErrors[field.id];
-                              return nextErrors;
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <CollapsibleSection
+                title={section.title}
+                description={section.description ?? undefined}
+                defaultOpen={sectionIndex === 0}
+              >
+                <ul className="space-y-3">
+                  {section.fields.map((field) => (
+                    <li
+                      key={field.id}
+                      className={`rounded-lg border px-4 py-4 sm:py-3 ${
+                        fieldErrors[field.id] ? "border-brand-red/50 bg-red-50/30" : "border-gray-200"
+                      }`}
+                    >
+                      <p className="text-base font-medium text-brand-charcoal sm:text-sm">
+                        {field.label}
+                        {field.required ? <span className="text-brand-red"> *</span> : null}
+                      </p>
+                      {field.helpText ? (
+                        <p className="mt-1 text-sm text-brand-gray">{field.helpText}</p>
+                      ) : null}
+                      <div className="mt-3">
+                        <ChecklistFieldInput
+                          field={field}
+                          sectionId={section.id}
+                          templateId={selectedTemplate.id}
+                          answer={answers[field.id] ?? defaultAnswerForField(field)}
+                          disabled={submitting}
+                          error={fieldErrors[field.id]}
+                          onChange={(next) => {
+                            setAnswers((prev) => ({ ...prev, [field.id]: next }));
+                            if (fieldErrors[field.id]) {
+                              setFieldErrors((prev) => {
+                                const nextErrors = { ...prev };
+                                delete nextErrors[field.id];
+                                return nextErrors;
+                              });
+                            }
+                          }}
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </CollapsibleSection>
             </div>
           ))}
 
@@ -505,7 +504,7 @@ export function ChecklistSubmissionForm() {
               maxLength={5000}
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
-              className={inputClassName}
+              className={inputBase}
             />
           </div>
 
@@ -523,12 +522,15 @@ export function ChecklistSubmissionForm() {
             </p>
           )}
 
-          <Button
-            type="submit"
-            disabled={submitting || generalPhotos.some((item) => item.status === "uploading")}
-          >
-            {submitting ? "Submitting…" : "Submit checklist"}
-          </Button>
+          <MobileActionBar>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={submitting || generalPhotos.some((item) => item.status === "uploading")}
+            >
+              {submitting ? "Submitting…" : "Submit checklist"}
+            </Button>
+          </MobileActionBar>
         </form>
       </Card>
     </div>

@@ -52,6 +52,7 @@ export const viewport: Viewport = {
   themeColor: "#0B1F4D",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -62,7 +63,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${sourceSans.variable} ${barlowCondensed.variable} flex min-h-screen flex-col font-sans antialiased`}
+        className={`${sourceSans.variable} ${barlowCondensed.variable} flex min-h-dvh flex-col font-sans antialiased safe-area-x`}
       >
         <LocalBusinessJsonLd />
         <AppProviders>

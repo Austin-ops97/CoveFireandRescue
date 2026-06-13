@@ -25,8 +25,10 @@ import {
 
 import {
   AlertBanner,
+  CollapsibleSection,
   InfoBanner,
   ListToolbar,
+  MobileActionBar,
   SkeletonCardList,
   StatusBadge,
 } from "@/components/ui";
@@ -421,7 +423,7 @@ export function ChecklistTemplateBuilder() {
             {form.sections.length === 1 ? "" : "s"}
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-6 pb-24 md:pb-0">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label htmlFor="name" className="block text-sm font-semibold text-brand-charcoal">
@@ -497,7 +499,7 @@ export function ChecklistTemplateBuilder() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, active: event.target.checked }))
                   }
-                  className="h-4 w-4 rounded border-gray-300 text-brand-red focus:ring-brand-red"
+                  className="h-5 w-5 rounded border-gray-300 text-brand-red focus:ring-brand-red sm:h-4 sm:w-4"
                 />
                 Active
               </label>
@@ -508,7 +510,7 @@ export function ChecklistTemplateBuilder() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, reusable: event.target.checked }))
                   }
-                  className="h-4 w-4 rounded border-gray-300 text-brand-red focus:ring-brand-red"
+                  className="h-5 w-5 rounded border-gray-300 text-brand-red focus:ring-brand-red sm:h-4 sm:w-4"
                 />
                 Reusable (members can submit)
               </label>
@@ -523,15 +525,22 @@ export function ChecklistTemplateBuilder() {
               </div>
 
               {form.sections.map((section, sectionIndex) => (
-                <div
+                <CollapsibleSection
                   key={section.id}
-                  className="rounded-md border border-gray-200 bg-brand-gray-light/20 p-4"
+                  title={section.title.trim() || `Section ${sectionIndex + 1}`}
+                  defaultOpen={sectionIndex === 0}
+                  className="rounded-lg border border-gray-200 bg-brand-gray-light/20 p-4"
+                  badge={
+                    <span className="text-xs font-semibold uppercase tracking-wide text-brand-gray">
+                      {section.fields.length} field{section.fields.length === 1 ? "" : "s"}
+                    </span>
+                  }
                 >
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-semibold uppercase tracking-wide text-brand-gray">
                       Section {sectionIndex + 1}
                     </span>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap [&>*]:w-full sm:[&>*]:w-auto">
                       <Button
                         type="button"
                         variant="outline"
@@ -709,7 +718,7 @@ export function ChecklistTemplateBuilder() {
                                   ),
                                 }))
                               }
-                              className="h-4 w-4 rounded border-gray-300 text-brand-red focus:ring-brand-red"
+                              className="h-5 w-5 rounded border-gray-300 text-brand-red focus:ring-brand-red sm:h-4 sm:w-4"
                             />
                             Required
                           </label>
@@ -799,7 +808,7 @@ export function ChecklistTemplateBuilder() {
                       </div>
                     ))}
                   </div>
-                </div>
+                </CollapsibleSection>
               ))}
             </div>
 
@@ -822,16 +831,16 @@ export function ChecklistTemplateBuilder() {
               </p>
             )}
 
-            <div className="flex flex-wrap gap-3">
-              <Button type="submit" disabled={saving || !formIsValid}>
+            <MobileActionBar>
+              <Button type="submit" className="w-full" disabled={saving || !formIsValid}>
                 {saving ? "Saving…" : editingId ? "Save changes" : "Create template"}
               </Button>
               {(editingId || form.name) && (
-                <Button type="button" variant="ghost" disabled={saving} onClick={resetForm}>
+                <Button type="button" variant="ghost" className="w-full" disabled={saving} onClick={resetForm}>
                   Cancel
                 </Button>
               )}
-            </div>
+            </MobileActionBar>
           </form>
         </Card>
 

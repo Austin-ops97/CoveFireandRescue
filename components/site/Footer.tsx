@@ -9,7 +9,7 @@ export function Footer() {
   const { contact, social } = siteConfig;
 
   return (
-    <footer className="border-t border-navy-800 bg-navy-900 text-gray-200">
+    <footer className="border-t border-navy-800 bg-navy-900 text-gray-200 safe-area-bottom">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         <div className="grid gap-6 sm:gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex items-start gap-3 sm:block lg:col-span-1">

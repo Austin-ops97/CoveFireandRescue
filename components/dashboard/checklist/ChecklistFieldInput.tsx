@@ -4,11 +4,13 @@ import { useState } from "react";
 import { Button } from "@/components/site/Button";
 import { MAX_SUBMISSION_PHOTOS } from "@/components/dashboard/checklist/PhotoUploadControl";
 import type { ChecklistTemplateField, FieldAnswerState } from "@/lib/checklist/types";
+import { inputBase } from "@/lib/ui/classes";
 import { uploadImageToB2 } from "@/lib/storage/client";
 
-const inputClassName = "mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm";
-const inputErrorClassName =
-  "mt-1 w-full rounded-md border border-brand-red px-3 py-2 text-sm ring-1 ring-brand-red/30";
+const inputErrorClassName = `${inputBase} border-brand-red ring-1 ring-brand-red/30`;
+
+const toggleButtonBase =
+  "min-h-11 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 sm:min-h-9 sm:px-3 sm:py-1.5";
 
 type ChecklistFieldInputProps = {
   field: ChecklistTemplateField;
@@ -36,7 +38,7 @@ export function ChecklistFieldInput({
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
   const hasError = Boolean(error);
-  const fieldInputClass = hasError ? inputErrorClassName : inputClassName;
+  const fieldInputClass = hasError ? inputErrorClassName : inputBase;
 
   if (field.type === "pass_fail" || field.type === "pass_fail_na" || field.type === "yes_no") {
     const options =
@@ -65,7 +67,7 @@ export function ChecklistFieldInput({
               type="button"
               disabled={disabled}
               onClick={() => onChange({ ...answer, value: option.value })}
-              className={`rounded-md border px-3 py-1.5 text-sm font-semibold disabled:opacity-50 ${
+              className={`${toggleButtonBase} ${
                 value === option.value
                   ? option.value === "fail" || option.value === "no"
                     ? "border-red-300 bg-red-50 text-red-800"
@@ -139,13 +141,13 @@ export function ChecklistFieldInput({
   if (field.type === "checkbox") {
     return (
       <div>
-        <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-brand-charcoal">
+        <label className="inline-flex min-h-11 cursor-pointer items-center gap-3 text-base font-semibold text-brand-charcoal sm:min-h-0 sm:text-sm">
           <input
             type="checkbox"
             disabled={disabled}
             checked={value === true}
             onChange={(event) => onChange({ ...answer, value: event.target.checked })}
-            className="h-4 w-4 rounded border-gray-300 text-brand-red focus:ring-brand-red"
+            className="h-5 w-5 rounded border-gray-300 text-brand-red focus:ring-brand-red sm:h-4 sm:w-4"
             aria-invalid={hasError}
           />
           Checked

@@ -215,3 +215,49 @@ export function isDashboardNavItemActive(
 
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
+
+export type DashboardNavGroup = {
+  id: string;
+  title: string;
+  items: DashboardNavItem[];
+};
+
+export function getGroupedDashboardNavItems(
+  role: string | null | undefined
+): DashboardNavGroup[] {
+  const isAdmin = role === "admin";
+  const groups: DashboardNavGroup[] = [
+    {
+      id: "home",
+      title: "Home",
+      items: [{ label: "Dashboard", href: "/dashboard" }],
+    },
+  ];
+
+  for (const group of dashboardModuleGroups) {
+    if (group.adminOnly && !isAdmin) continue;
+
+    const items: DashboardNavItem[] = [];
+
+    for (const entry of group.modules) {
+      if (!entry.href || entry.status === "coming_soon") continue;
+      if (entry.status === "admin_only" && !isAdmin) continue;
+
+      items.push({
+        label: entry.navLabel ?? entry.title,
+        href: entry.href,
+        exactNavMatch: entry.exactNavMatch,
+      });
+    }
+
+    if (items.length > 0) {
+      groups.push({
+        id: group.id,
+        title: group.title,
+        items,
+      });
+    }
+  }
+
+  return groups;
+}

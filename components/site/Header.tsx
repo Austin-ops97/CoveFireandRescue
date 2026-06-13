@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { canAccessDashboard } from "@/lib/auth/roles";
 import { DonateModal } from "@/components/site/DonateModal";
+import { MobileDrawer } from "@/components/ui/MobileDrawer";
 import { mainNavLinks } from "@/lib/config/navigation";
 
 const donateButtonClass =
@@ -37,17 +38,6 @@ export function Header() {
     setMobileOpen(false);
   }, [pathname]);
 
-  useEffect(() => {
-    if (mobileOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [mobileOpen]);
-
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
@@ -64,6 +54,17 @@ export function Header() {
     }`;
   };
 
+  const mobileNavLinkClass = (href: string, cta?: boolean) => {
+    if (cta) {
+      return "block min-h-11 rounded-[10px] border border-navy-900 bg-navy-900 px-4 py-3 text-base font-bold text-white transition-colors hover:border-navy-800 hover:bg-navy-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700/40";
+    }
+    return `block min-h-11 rounded-[10px] px-4 py-3 text-base font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700/40 ${
+      isActive(href)
+        ? "bg-[#EEF2FF] text-blue-700"
+        : "text-text-dark hover:bg-gray-100"
+    }`;
+  };
+
   const openDonateModal = () => {
     setMobileOpen(false);
     setDonateOpen(true);
@@ -73,7 +74,7 @@ export function Header() {
   const ctaNavLinks = navLinks.filter((link) => link.cta);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-[0_2px_12px_rgba(16,24,40,0.06)]">
+    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-[0_2px_12px_rgba(16,24,40,0.06)] safe-area-top">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6 lg:px-8">
         <Link
           href="/"
@@ -84,7 +85,7 @@ export function Header() {
             alt="Cove Fire & Rescue — Chambers County volunteer fire department"
             width={92}
             height={92}
-            className="h-[3.74rem] w-auto shrink-0 sm:h-[4.31rem]"
+            className="h-14 w-auto shrink-0 sm:h-[4.31rem]"
             priority
             unoptimized
           />
@@ -124,7 +125,7 @@ export function Header() {
 
         <button
           type="button"
-          className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-[10px] p-2 text-navy-900 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700/40 focus-visible:ring-offset-2 lg:hidden"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[10px] p-2 text-navy-900 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700/40 focus-visible:ring-offset-2 lg:hidden"
           aria-expanded={mobileOpen}
           aria-controls="mobile-menu"
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
@@ -143,56 +144,46 @@ export function Header() {
         </button>
       </div>
 
-      {mobileOpen && (
-        <>
-          <div
-            className="fixed inset-0 top-[74px] z-40 bg-black/25 backdrop-blur-[1px] lg:hidden"
-            aria-hidden
-            onClick={() => setMobileOpen(false)}
-          />
-          <nav
-            id="mobile-menu"
-            className="fixed left-0 right-0 top-[74px] z-50 max-h-[calc(100dvh-74px)] overflow-y-auto border-t border-gray-200 bg-white shadow-lg lg:hidden"
-            aria-label="Mobile navigation"
-          >
-            <ul className="flex flex-col gap-1 p-3">
-              {standardNavLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className={`block min-h-11 rounded-[10px] px-4 py-3 text-base font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700/40 ${
-                      isActive(link.href)
-                        ? "bg-[#EEF2FF] text-blue-700"
-                        : "text-text-dark hover:bg-gray-100"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-              <li>
-                <button
-                  type="button"
-                  className={donateButtonMobileClass}
-                  onClick={openDonateModal}
+      <MobileDrawer
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        title="Menu"
+        id="mobile-menu"
+        hideAt="lg"
+      >
+        <nav aria-label="Mobile navigation">
+          <ul className="flex flex-col gap-1">
+            {standardNavLinks.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className={mobileNavLinkClass(link.href)}
+                  aria-current={isActive(link.href) ? "page" : undefined}
+                  onClick={() => setMobileOpen(false)}
                 >
-                  Donate
-                </button>
+                  {link.label}
+                </Link>
               </li>
-              {ctaNavLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="block min-h-11 rounded-[10px] border border-navy-900 bg-navy-900 px-4 py-3 text-base font-bold text-white transition-colors hover:border-navy-800 hover:bg-navy-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700/40"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </>
-      )}
+            ))}
+            <li>
+              <button type="button" className={donateButtonMobileClass} onClick={openDonateModal}>
+                Donate
+              </button>
+            </li>
+            {ctaNavLinks.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className={mobileNavLinkClass(link.href, true)}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </MobileDrawer>
 
       {donateOpen && <DonateModal onClose={() => setDonateOpen(false)} />}
     </header>

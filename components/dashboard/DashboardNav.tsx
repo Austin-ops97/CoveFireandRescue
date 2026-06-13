@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/site/Button";
+import { MobileDrawer } from "@/components/ui/MobileDrawer";
 import { useAuth } from "@/hooks/useAuth";
 import { canAccessDashboard } from "@/lib/auth/roles";
 import {
+  getGroupedDashboardNavItems,
   getVisibleDashboardNavItems,
   isDashboardNavItemActive,
 } from "@/lib/config/dashboard-modules";
@@ -18,6 +20,11 @@ export function DashboardNav() {
   const { user, profile, role, loading, signOutUser } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (role !== "admin") return;
@@ -42,13 +49,19 @@ export function DashboardNav() {
     };
   }, [role]);
 
+  const navItems = getVisibleDashboardNavItems(role);
+  const navGroups = getGroupedDashboardNavItems(role);
+  const onDashboardHome = pathname === "/dashboard";
+  const displayName = profile?.displayName?.trim() || user?.email || "Member";
+
+  const currentPageLabel = useMemo(() => {
+    const active = navItems.find((item) => isDashboardNavItemActive(pathname, item));
+    return active?.label ?? "Dashboard";
+  }, [navItems, pathname]);
+
   if (!user || (!loading && !canAccessDashboard(role))) {
     return null;
   }
-
-  const navItems = getVisibleDashboardNavItems(role);
-  const onDashboardHome = pathname === "/dashboard";
-  const displayName = profile?.displayName?.trim() || user.email || "Member";
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -67,46 +80,73 @@ export function DashboardNav() {
         : "border-white/25 bg-white/10 text-white hover:border-white/40 hover:bg-white/15"
     }`;
 
+  const drawerLinkClass = (active: boolean) =>
+    `flex min-h-11 items-center rounded-lg px-3 py-2.5 text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 ${
+      active
+        ? "bg-gold-500/15 text-navy-900 ring-1 ring-gold-500/40"
+        : "text-brand-charcoal hover:bg-gray-100"
+    }`;
+
   return (
-    <div className="border-b-4 border-gold-500 bg-navy-900 text-white shadow-lg">
+    <div className="border-b-4 border-gold-500 bg-navy-900 text-white shadow-lg safe-area-x">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3 py-3">
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             {!onDashboardHome && (
               <Link
                 href="/dashboard"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900"
+                className="hidden shrink-0 items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900 sm:inline-flex"
               >
                 <span aria-hidden>←</span>
-                <span>Dashboard home</span>
+                <span className="hidden sm:inline">Dashboard home</span>
+                <span className="sm:hidden">Home</span>
               </Link>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-gold-500">
                 Member portal
               </p>
               <p className="truncate text-sm text-white/80">
-                Signed in as <span className="font-semibold text-white">{displayName}</span>
+                <span className="font-semibold text-white">{displayName}</span>
+                <span className="mx-1.5 text-white/40 md:hidden">·</span>
+                <span className="font-medium text-gold-500 md:hidden">{currentPageLabel}</span>
               </p>
             </div>
           </div>
 
-          <Button
-            type="button"
-            variant="heroTertiary"
-            size="sm"
-            disabled={signingOut}
-            onClick={() => void handleSignOut()}
-          >
-            {signingOut ? "Signing out…" : "Sign out"}
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 md:hidden"
+              aria-expanded={menuOpen}
+              aria-controls="dashboard-mobile-menu"
+              onClick={() => setMenuOpen(true)}
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              Tools
+            </button>
+            <Button
+              type="button"
+              variant="heroTertiary"
+              size="sm"
+              disabled={signingOut}
+              onClick={() => void handleSignOut()}
+            >
+              {signingOut ? "Signing out…" : "Sign out"}
+            </Button>
+          </div>
         </div>
 
-        <nav aria-label="Dashboard tools" className="border-t border-white/15 pb-4 pt-3">
+        <nav
+          aria-label="Dashboard tools"
+          className="hidden border-t border-white/15 pb-4 pt-3 md:block"
+        >
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/60">
             Jump to a tool
           </p>
-          <div className="flex flex-wrap gap-2 max-md:flex-nowrap max-md:overflow-x-auto max-md:pb-1 max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden">
+          <div className="flex flex-wrap gap-2">
             {navItems.map((item) => {
               const active = isDashboardNavItemActive(pathname, item);
               const showBadge =
@@ -131,6 +171,48 @@ export function DashboardNav() {
           </div>
         </nav>
       </div>
+
+      <MobileDrawer
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        title="Dashboard tools"
+        id="dashboard-mobile-menu"
+      >
+        <nav aria-label="Dashboard tools" className="space-y-6">
+          {navGroups.map((group) => (
+            <div key={group.id}>
+              <p className="mb-2 px-3 text-xs font-bold uppercase tracking-wide text-brand-gray">
+                {group.title}
+              </p>
+              <ul className="space-y-1">
+                {group.items.map((item) => {
+                  const active = isDashboardNavItemActive(pathname, item);
+                  const showBadge =
+                    item.href === "/dashboard/rounds/notifications" && unreadNotifications > 0;
+
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={drawerLinkClass(active)}
+                        aria-current={active ? "page" : undefined}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <span className="flex-1">{item.label}</span>
+                        {showBadge && (
+                          <span className="ml-2 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-red px-1.5 py-0.5 text-xs font-bold text-white">
+                            {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+      </MobileDrawer>
     </div>
   );
 }

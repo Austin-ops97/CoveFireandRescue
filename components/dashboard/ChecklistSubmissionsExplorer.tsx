@@ -7,10 +7,11 @@ import { Card } from "@/components/site/Card";
 import {
   AlertBanner,
   EmptyState,
+  MobileFilterPanel,
   SkeletonCardList,
   StatusBadge,
 } from "@/components/ui";
-import { inputBase } from "@/lib/ui/classes";
+import { inputBase, mobileActionStack } from "@/lib/ui/classes";
 import { ReviewDashboardWidgets } from "@/components/dashboard/checklist/ReviewDashboardWidgets";
 import { FleetUnitReference } from "@/components/dashboard/checklist/FleetUnitReference";
 import { PhotoGallery } from "@/components/dashboard/checklist/PhotoGallery";
@@ -367,29 +368,33 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
           {isReview ? "Filter submissions for review" : "Filter history"}
         </h2>
 
-        {!isReview && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => applyQuickFilter("today")}>
-              Today
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => applyQuickFilter("last7")}>
-              Last 7 Days
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => applyQuickFilter("last30")}>
-              Last 30 Days
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => applyQuickFilter("thisMonth")}
-            >
-              This Month
-            </Button>
-          </div>
-        )}
+        <MobileFilterPanel
+          title={isReview ? "Filters" : "Search & filters"}
+          onApply={() => void loadSubmissions()}
+        >
+          {!isReview && (
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => applyQuickFilter("today")}>
+                Today
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => applyQuickFilter("last7")}>
+                Last 7 Days
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => applyQuickFilter("last30")}>
+                Last 30 Days
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => applyQuickFilter("thisMonth")}
+              >
+                This Month
+              </Button>
+            </div>
+          )}
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label className="block text-sm font-semibold text-brand-charcoal">From date</label>
             <input
@@ -512,9 +517,16 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
               {isAdmin && <option value="deleted">Deleted / Trash</option>}
             </select>
           </div>
-        </div>
+          </div>
+        </MobileFilterPanel>
 
-        <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => void loadSubmissions()}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-4 hidden md:inline-flex"
+          onClick={() => void loadSubmissions()}
+        >
           Apply filters
         </Button>
       </Card>
@@ -614,7 +626,7 @@ export function ChecklistSubmissionsExplorer({ mode }: { mode: ExplorerMode }) {
                     </div>
                   )}
                 </div>
-                <div className="flex shrink-0 flex-wrap gap-2">
+                <div className={`shrink-0 ${mobileActionStack}`}>
                   <Button
                     type="button"
                     variant="outline"

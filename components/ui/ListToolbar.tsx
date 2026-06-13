@@ -28,7 +28,7 @@ export function ListToolbar({
           </p>
         )}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 [&>*]:w-full sm:[&>*]:w-auto">
         {actions}
         {onRefresh && (
           <Button
