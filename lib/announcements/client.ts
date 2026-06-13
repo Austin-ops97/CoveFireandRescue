@@ -61,7 +61,18 @@ export async function saveAnnouncement(
   return data.announcement;
 }
 
-export async function archiveAnnouncement(id: string): Promise<void> {
+export async function archiveAnnouncement(record: AnnouncementRecord): Promise<AnnouncementRecord> {
+  return saveAnnouncement({
+    id: record.id,
+    title: record.title,
+    body: record.body,
+    category: record.category,
+    status: "archived",
+    pinned: record.pinned,
+  });
+}
+
+export async function deleteAnnouncement(id: string): Promise<void> {
   const response = await authenticatedFetch(`/api/admin/announcements/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });

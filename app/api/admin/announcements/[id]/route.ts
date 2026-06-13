@@ -1,4 +1,3 @@
-import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/audit/server";
 import { serializeAnnouncementDoc } from "@/lib/announcements/server";
@@ -28,21 +27,15 @@ export async function DELETE(request: Request, context: RouteContext) {
 
     const previous = serializeAnnouncementDoc(existing);
 
-    await docRef.set(
-      {
-        status: "archived",
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+    await docRef.delete();
 
     await writeAuditLog({
-      action: "announcement.archived",
+      action: "announcement.deleted",
       actorUid: actor.uid,
       actorRole: actor.role!,
       targetType: "announcement",
       targetId: id.trim(),
-      message: `Archived announcement "${previous.title}" via delete action`,
+      message: `Permanently deleted announcement "${previous.title}"`,
     });
 
     return NextResponse.json({ ok: true });

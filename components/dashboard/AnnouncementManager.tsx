@@ -15,6 +15,7 @@ import {
 import { inputBase } from "@/lib/ui/classes";
 import {
   archiveAnnouncement,
+  deleteAnnouncement,
   fetchAdminAnnouncements,
   saveAnnouncement,
 } from "@/lib/announcements/client";
@@ -78,6 +79,7 @@ export function AnnouncementManager() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [archivingId, setArchivingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -149,24 +151,53 @@ export function AnnouncementManager() {
     }
   }
 
-  async function handleArchive(id: string, title: string) {
-    if (!window.confirm(`Archive "${title}"? It will be removed from the public billboard.`)) {
+  async function handleArchive(record: AnnouncementRecord) {
+    if (
+      !window.confirm(
+        `Archive "${record.title}"? It will be removed from the public billboard but kept in the admin list.`
+      )
+    ) {
       return;
     }
 
-    setArchivingId(id);
+    setArchivingId(record.id);
     setSaveError(null);
     setSuccessMessage(null);
 
     try {
-      await archiveAnnouncement(id);
+      await archiveAnnouncement(record);
       await loadAnnouncements(true);
-      if (editingId === id) resetForm();
-      setSuccessMessage(`Archived "${title}".`);
+      if (editingId === record.id) resetForm();
+      setSuccessMessage(`Archived "${record.title}".`);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Failed to archive announcement.");
     } finally {
       setArchivingId(null);
+    }
+  }
+
+  async function handleDelete(record: AnnouncementRecord) {
+    if (
+      !window.confirm(
+        `Permanently delete "${record.title}"? This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingId(record.id);
+    setSaveError(null);
+    setSuccessMessage(null);
+
+    try {
+      await deleteAnnouncement(record.id);
+      await loadAnnouncements(true);
+      if (editingId === record.id) resetForm();
+      setSuccessMessage(`Deleted "${record.title}".`);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Failed to delete announcement.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -365,12 +396,22 @@ export function AnnouncementManager() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        disabled={archivingId === item.id}
-                        onClick={() => void handleArchive(item.id, item.title)}
+                        disabled={archivingId === item.id || deletingId === item.id}
+                        onClick={() => void handleArchive(item)}
                       >
                         {archivingId === item.id ? "Archiving…" : "Archive"}
                       </Button>
                     )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="border-red-200 text-red-700 hover:bg-red-50"
+                      disabled={archivingId === item.id || deletingId === item.id}
+                      onClick={() => void handleDelete(item)}
+                    >
+                      {deletingId === item.id ? "Deleting…" : "Delete"}
+                    </Button>
                   </div>
                 </div>
               </Card>
