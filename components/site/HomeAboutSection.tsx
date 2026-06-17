@@ -12,7 +12,7 @@ export function HomeAboutSection() {
           <div>
             <SectionHeader
               eyebrow="About the Department"
-              title={`Serving Cove and West Chambers County Since 1970`}
+              title={`Serving Cove and West Chambers County Since 1972`}
               subtitle="Cove Fire & Rescue provides volunteer fire and emergency response service with a focus on readiness, training, and community protection."
             />
             <p className="text-base leading-relaxed text-gray-500">

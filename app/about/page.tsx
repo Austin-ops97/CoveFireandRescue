@@ -8,7 +8,7 @@ import { departmentHistory, siteConfig } from "@/lib/config/site";
 export const metadata: Metadata = {
   title: "About Cove Fire & Rescue",
   description:
-    "Learn about Cove Fire & Rescue — a volunteer fire department serving Cove and West Chambers County, Texas since 1970.",
+    "Learn about Cove Fire & Rescue — a volunteer fire department serving Cove and West Chambers County, Texas since 1972.",
   keywords: [...siteConfig.seo.keywords],
 };
 

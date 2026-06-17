@@ -14,7 +14,7 @@ const donateButtonClass =
   "rounded-[10px] border border-gold-500 bg-gold-500 font-bold text-text-dark shadow-sm transition-colors hover:border-gold-600 hover:bg-gold-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/50 focus-visible:ring-offset-2";
 
 const donateButtonDesktopClass = `ml-1 inline-flex min-h-10 items-center px-3 py-2 text-sm ${donateButtonClass}`;
-const donateButtonMobileClass = `block w-full min-h-11 px-4 py-3 text-left text-base ${donateButtonClass}`;
+const donateButtonMobileHeaderClass = `inline-flex min-h-11 items-center px-3 py-2 text-sm ${donateButtonClass}`;
 
 export function Header() {
   const pathname = usePathname();
@@ -123,25 +123,30 @@ export function Header() {
           ))}
         </nav>
 
-        <button
-          type="button"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[10px] p-2 text-navy-900 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700/40 focus-visible:ring-offset-2 lg:hidden"
-          aria-expanded={mobileOpen}
-          aria-controls="mobile-menu"
-          aria-label={mobileOpen ? "Close menu" : "Open menu"}
-          onClick={() => setMobileOpen((open) => !open)}
-        >
-          <span className="sr-only">{mobileOpen ? "Close" : "Menu"}</span>
-          {mobileOpen ? (
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          ) : (
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          )}
-        </button>
+        <div className="flex items-center gap-2 lg:hidden">
+          <button type="button" className={donateButtonMobileHeaderClass} onClick={openDonateModal}>
+            Donate
+          </button>
+          <button
+            type="button"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[10px] p-2 text-navy-900 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700/40 focus-visible:ring-offset-2"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-menu"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            onClick={() => setMobileOpen((open) => !open)}
+          >
+            <span className="sr-only">{mobileOpen ? "Close" : "Menu"}</span>
+            {mobileOpen ? (
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
 
       <MobileDrawer
@@ -165,11 +170,6 @@ export function Header() {
                 </Link>
               </li>
             ))}
-            <li>
-              <button type="button" className={donateButtonMobileClass} onClick={openDonateModal}>
-                Donate
-              </button>
-            </li>
             {ctaNavLinks.map((link) => (
               <li key={link.href}>
                 <Link
