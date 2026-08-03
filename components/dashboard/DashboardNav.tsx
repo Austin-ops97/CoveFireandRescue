@@ -13,8 +13,10 @@ import {
   isDashboardNavItemActive,
 } from "@/lib/config/dashboard-modules";
 import { fetchUnreadNotificationCount } from "@/lib/notifications/client";
-import { fetchRequestTickets } from "@/lib/request-tickets/client";
-import { isRequestTicketOpen } from "@/lib/request-tickets/types";
+import {
+  fetchRequestTickets,
+  REQUEST_TICKETS_CHANGED_EVENT,
+} from "@/lib/request-tickets/client";
 
 export function DashboardNav() {
   const pathname = usePathname();
@@ -22,7 +24,7 @@ export function DashboardNav() {
   const { user, profile, role, loading, signOutUser } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [openRequests, setOpenRequests] = useState(0);
+  const [unreadRequests, setUnreadRequests] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -42,22 +44,25 @@ export function DashboardNav() {
         ]);
         if (!cancelled) {
           setUnreadNotifications(notificationCount);
-          setOpenRequests(tickets.filter((ticket) => isRequestTicketOpen(ticket.status)).length);
+          setUnreadRequests(tickets.filter((ticket) => ticket.adminNotificationUnread).length);
         }
       } catch {
         if (!cancelled) {
           setUnreadNotifications(0);
-          setOpenRequests(0);
+          setUnreadRequests(0);
         }
       }
     }
 
     void loadAdminCounts();
     const interval = window.setInterval(() => void loadAdminCounts(), 60_000);
+    const handleRequestTicketsChanged = () => void loadAdminCounts();
+    window.addEventListener(REQUEST_TICKETS_CHANGED_EVENT, handleRequestTicketsChanged);
 
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+      window.removeEventListener(REQUEST_TICKETS_CHANGED_EVENT, handleRequestTicketsChanged);
     };
   }, [role]);
 
@@ -166,7 +171,7 @@ export function DashboardNav() {
                 item.href === "/dashboard/rounds/notifications"
                   ? unreadNotifications
                   : item.href === "/dashboard/requests"
-                    ? openRequests
+                    ? unreadRequests
                     : 0;
               const showBadge = badgeCount > 0;
 
@@ -209,7 +214,7 @@ export function DashboardNav() {
                     item.href === "/dashboard/rounds/notifications"
                       ? unreadNotifications
                       : item.href === "/dashboard/requests"
-                        ? openRequests
+                        ? unreadRequests
                         : 0;
                   const showBadge = badgeCount > 0;
 

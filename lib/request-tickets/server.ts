@@ -107,6 +107,10 @@ export function serializeRequestTicketDoc(doc: DocumentSnapshot): RequestTicket 
     location: typeof data.location === "string" ? data.location : null,
     priority: readPriority(data.priority),
     status: readStatus(data.status),
+    adminNotificationUnread:
+      typeof data.adminNotificationUnread === "boolean"
+        ? data.adminNotificationUnread
+        : typeof data.updatedBy !== "string" || !data.updatedBy.trim(),
     submittedBy: typeof data.submittedBy === "string" ? data.submittedBy : "",
     submittedByName: typeof data.submittedByName === "string" ? data.submittedByName : null,
     submittedByEmail: typeof data.submittedByEmail === "string" ? data.submittedByEmail : null,

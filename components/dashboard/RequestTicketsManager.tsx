@@ -82,10 +82,12 @@ function RequestTicketCard({
   ticket,
   isAdmin,
   onUpdated,
+  onDeleted,
 }: {
   ticket: RequestTicket;
   isAdmin: boolean;
   onUpdated: (ticket: RequestTicket) => void;
+  onDeleted: (ticket: RequestTicket) => void;
 }) {
   return (
     <Card as="article" className="overflow-hidden">
@@ -100,6 +102,9 @@ function RequestTicketCard({
               label={`${getRequestTicketPriorityLabel(ticket.priority)} priority`}
               variant={priorityVariant(ticket.priority)}
             />
+            {isAdmin && ticket.adminNotificationUnread ? (
+              <StatusBadge label="New request" variant="attention" />
+            ) : null}
           </div>
           <h3 className="mt-3 text-lg font-bold text-brand-charcoal">{ticket.title}</h3>
           <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-brand-gray">
@@ -147,7 +152,11 @@ function RequestTicketCard({
       ) : null}
 
       {isAdmin ? (
-        <RequestTicketAdminControls ticket={ticket} onUpdated={onUpdated} />
+        <RequestTicketAdminControls
+          ticket={ticket}
+          onUpdated={onUpdated}
+          onDeleted={onDeleted}
+        />
       ) : null}
     </Card>
   );
@@ -163,6 +172,7 @@ export function RequestTicketsManager() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [queueMessage, setQueueMessage] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
@@ -245,6 +255,11 @@ export function RequestTicketsManager() {
         .map((ticket) => (ticket.id === updated.id ? updated : ticket))
         .sort((a, b) => parseTime(b.updatedAt) - parseTime(a.updatedAt))
     );
+  }
+
+  function handleDeleted(deleted: RequestTicket) {
+    setTickets((current) => current.filter((ticket) => ticket.id !== deleted.id));
+    setQueueMessage(`${deleted.ticketNumber} was permanently deleted.`);
   }
 
   return (
@@ -421,6 +436,12 @@ export function RequestTicketsManager() {
           </Button>
         </div>
 
+        {queueMessage ? (
+          <AlertBanner variant="success" title="Request deleted">
+            {queueMessage}
+          </AlertBanner>
+        ) : null}
+
         <Card variant="muted" padding="sm">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <FormField id="request-filter-status" label="Status">
@@ -510,6 +531,7 @@ export function RequestTicketsManager() {
                 ticket={ticket}
                 isAdmin={isAdmin}
                 onUpdated={handleUpdated}
+                onDeleted={handleDeleted}
               />
             ))}
           </div>

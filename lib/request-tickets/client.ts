@@ -7,6 +7,12 @@ import type {
   UpdateRequestTicketPayload,
 } from "@/lib/request-tickets/types";
 
+export const REQUEST_TICKETS_CHANGED_EVENT = "request-tickets-changed";
+
+function dispatchRequestTicketsChanged(): void {
+  window.dispatchEvent(new Event(REQUEST_TICKETS_CHANGED_EVENT));
+}
+
 async function readApiError(response: Response): Promise<string> {
   try {
     const data = (await response.json()) as { error?: string };
@@ -51,6 +57,7 @@ export async function createRequestTicket(
     throw new Error("Server did not return the created request.");
   }
 
+  dispatchRequestTicketsChanged();
   return data.ticket;
 }
 
@@ -73,5 +80,18 @@ export async function updateRequestTicket(
     throw new Error("Server did not return the updated request.");
   }
 
+  dispatchRequestTicketsChanged();
   return data.ticket;
+}
+
+export async function deleteRequestTicket(id: string): Promise<void> {
+  const response = await authenticatedFetch(`/api/request-tickets/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+
+  dispatchRequestTicketsChanged();
 }
