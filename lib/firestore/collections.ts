@@ -12,6 +12,7 @@ export const COLLECTIONS = {
   files: "files",
   trainingRecords: "trainingRecords",
   equipment: "equipment",
+  requestTickets: "requestTickets",
   auditLogs: "auditLogs",
   storageFolders: "storageFolders",
   storageFiles: "storageFiles",
@@ -52,6 +53,9 @@ export const trainingRecordDocPath = (id: string): string =>
   `${COLLECTIONS.trainingRecords}/${id}`;
 
 export const equipmentDocPath = (id: string): string => `${COLLECTIONS.equipment}/${id}`;
+
+export const requestTicketDocPath = (id: string): string =>
+  `${COLLECTIONS.requestTickets}/${id}`;
 
 export const auditLogDocPath = (id: string): string =>
   `${COLLECTIONS.auditLogs}/${id}`;

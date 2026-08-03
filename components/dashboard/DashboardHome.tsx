@@ -17,6 +17,12 @@ import type { DashboardSummary } from "@/lib/dashboard/types";
 
 const ADMIN_QUICK_ACTIONS: QuickAction[] = [
   {
+    title: "Review request tickets",
+    description: "Handle supply, facility, equipment, and other member requests.",
+    href: "/dashboard/requests",
+    emphasis: true,
+  },
+  {
     title: "Submit checklist",
     description: "Complete a digital rounds or inspection form.",
     href: "/dashboard/rounds",
@@ -70,6 +76,12 @@ const ADMIN_QUICK_ACTIONS: QuickAction[] = [
 ];
 
 const MEMBER_QUICK_ACTIONS: QuickAction[] = [
+  {
+    title: "Submit a request",
+    description: "Ask administrators for supplies, repairs, equipment, or other needs.",
+    href: "/dashboard/requests",
+    emphasis: true,
+  },
   {
     title: "Submit inspection",
     description: "Start a new digital rounds or checklist submission.",
@@ -164,6 +176,16 @@ export function DashboardHome() {
         <DashboardSection title="At a glance" description="Live counts across connected modules.">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <DashboardStatCard
+              label="Open requests"
+              value={summary.openRequestCount}
+              variant={summary.urgentRequestCount > 0 ? "attention" : "default"}
+              hint={
+                summary.urgentRequestCount > 0
+                  ? `${summary.urgentRequestCount} urgent`
+                  : "Member requests needing action"
+              }
+            />
+            <DashboardStatCard
               label="Recent submissions"
               value={summary.recentSubmissionCount}
               hint="Last 30 days"
@@ -210,12 +232,17 @@ export function DashboardHome() {
       <div>
         <h2 className="text-xl font-bold text-brand-charcoal">{greeting}</h2>
         <p className="mt-1 text-sm text-brand-gray">
-          Submit inspections and review your submission history.
+          Submit requests and inspections, then track their progress.
         </p>
       </div>
 
       <DashboardSection title="Your activity" description="Summary of your checklist work.">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <DashboardStatCard
+            label="Open requests"
+            value={summary.myOpenRequestCount}
+            hint="Requests awaiting completion"
+          />
           <DashboardStatCard
             label="Available checklists"
             value={summary.availableTemplateCount}

@@ -8,13 +8,15 @@ import {
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firestore/collections";
 
-const CHECKLIST_AUDIT_ACTIONS: AuditAction[] = [
+const VISIBLE_AUDIT_ACTIONS: AuditAction[] = [
   "checklist.submission.created",
   "checklist.submission.deleted",
   "checklist.submission.restored",
   "checklist.submission.purged",
   "checklist.notification.acknowledged",
   "checklist.submission.review_acknowledged",
+  "request_ticket.created",
+  "request_ticket.updated",
 ];
 
 function serializeTimestamp(value: unknown): unknown {
@@ -65,7 +67,7 @@ export async function GET(request: Request) {
 
     let logs = snapshot.docs.map((doc) => serializeAuditLogDoc(doc));
 
-    logs = logs.filter((log) => CHECKLIST_AUDIT_ACTIONS.includes(log.action));
+    logs = logs.filter((log) => VISIBLE_AUDIT_ACTIONS.includes(log.action));
 
     if (targetType) {
       logs = logs.filter((log) => log.targetType === targetType);
@@ -75,7 +77,7 @@ export async function GET(request: Request) {
       logs = logs.filter((log) => log.targetId === targetId);
     }
 
-    if (actionParam && CHECKLIST_AUDIT_ACTIONS.includes(actionParam as AuditAction)) {
+    if (actionParam && VISIBLE_AUDIT_ACTIONS.includes(actionParam as AuditAction)) {
       logs = logs.filter((log) => log.action === actionParam);
     }
 

@@ -13,6 +13,8 @@ import {
   isDashboardNavItemActive,
 } from "@/lib/config/dashboard-modules";
 import { fetchUnreadNotificationCount } from "@/lib/notifications/client";
+import { fetchRequestTickets } from "@/lib/request-tickets/client";
+import { isRequestTicketOpen } from "@/lib/request-tickets/types";
 
 export function DashboardNav() {
   const pathname = usePathname();
@@ -20,6 +22,7 @@ export function DashboardNav() {
   const { user, profile, role, loading, signOutUser } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [openRequests, setOpenRequests] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -31,17 +34,26 @@ export function DashboardNav() {
 
     let cancelled = false;
 
-    async function loadUnreadCount() {
+    async function loadAdminCounts() {
       try {
-        const count = await fetchUnreadNotificationCount();
-        if (!cancelled) setUnreadNotifications(count);
+        const [notificationCount, tickets] = await Promise.all([
+          fetchUnreadNotificationCount(),
+          fetchRequestTickets(),
+        ]);
+        if (!cancelled) {
+          setUnreadNotifications(notificationCount);
+          setOpenRequests(tickets.filter((ticket) => isRequestTicketOpen(ticket.status)).length);
+        }
       } catch {
-        if (!cancelled) setUnreadNotifications(0);
+        if (!cancelled) {
+          setUnreadNotifications(0);
+          setOpenRequests(0);
+        }
       }
     }
 
-    void loadUnreadCount();
-    const interval = window.setInterval(() => void loadUnreadCount(), 60_000);
+    void loadAdminCounts();
+    const interval = window.setInterval(() => void loadAdminCounts(), 60_000);
 
     return () => {
       cancelled = true;
@@ -150,8 +162,13 @@ export function DashboardNav() {
           <div className="flex flex-wrap gap-2">
             {navItems.map((item) => {
               const active = isDashboardNavItemActive(pathname, item);
-              const showBadge =
-                item.href === "/dashboard/rounds/notifications" && unreadNotifications > 0;
+              const badgeCount =
+                item.href === "/dashboard/rounds/notifications"
+                  ? unreadNotifications
+                  : item.href === "/dashboard/requests"
+                    ? openRequests
+                    : 0;
+              const showBadge = badgeCount > 0;
 
               return (
                 <Link
@@ -163,7 +180,7 @@ export function DashboardNav() {
                   {item.label}
                   {showBadge && (
                     <span className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-red px-1.5 py-0.5 text-xs font-bold text-white">
-                      {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                      {badgeCount > 99 ? "99+" : badgeCount}
                     </span>
                   )}
                 </Link>
@@ -188,8 +205,13 @@ export function DashboardNav() {
               <ul className="space-y-1">
                 {group.items.map((item) => {
                   const active = isDashboardNavItemActive(pathname, item);
-                  const showBadge =
-                    item.href === "/dashboard/rounds/notifications" && unreadNotifications > 0;
+                  const badgeCount =
+                    item.href === "/dashboard/rounds/notifications"
+                      ? unreadNotifications
+                      : item.href === "/dashboard/requests"
+                        ? openRequests
+                        : 0;
+                  const showBadge = badgeCount > 0;
 
                   return (
                     <li key={item.href}>
@@ -202,7 +224,7 @@ export function DashboardNav() {
                         <span className="flex-1">{item.label}</span>
                         {showBadge && (
                           <span className="ml-2 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-red px-1.5 py-0.5 text-xs font-bold text-white">
-                            {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                            {badgeCount > 99 ? "99+" : badgeCount}
                           </span>
                         )}
                       </Link>

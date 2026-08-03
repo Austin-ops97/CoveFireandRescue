@@ -25,6 +25,8 @@ export type DashboardSummaryAdmin = DashboardSummaryBase & {
   documentCount: number;
   trainingRecordCount: number;
   equipmentCount: number;
+  openRequestCount: number;
+  urgentRequestCount: number;
 };
 
 export type DashboardSummaryMember = DashboardSummaryBase & {
@@ -32,6 +34,7 @@ export type DashboardSummaryMember = DashboardSummaryBase & {
   availableTemplateCount: number;
   myRecentSubmissionCount: number;
   myFailedSubmissionCount: number;
+  myOpenRequestCount: number;
 };
 
 export type DashboardSummary = DashboardSummaryAdmin | DashboardSummaryMember;

@@ -30,6 +30,15 @@ Copy `.env.local.example` → `.env.local`.
 - Collection constants: `lib/firestore/collections.ts`
 - Document types: `lib/firestore/types.ts`
 - Security rules: `firestore.rules`
+- `requestTickets` stores authenticated member requests, admin responses, priority, and status. All access uses server API routes so requesters cannot read other members' tickets or change admin-managed fields.
+
+## Request ticket flow
+
+1. Any active dashboard user submits a request from `/dashboard/requests`.
+2. `POST /api/request-tickets` verifies the Firebase ID token, validates the request, and stamps the authenticated requester identity.
+3. Non-admin users receive only their own tickets from `GET /api/request-tickets`; administrators receive the department-wide queue.
+4. Only administrators can call `PATCH /api/request-tickets/[id]` to update status, priority, and the requester-visible response.
+5. Creates and updates are written to `auditLogs`, and unresolved ticket counts appear on the appropriate dashboard overview.
 
 ## Backblaze B2
 
