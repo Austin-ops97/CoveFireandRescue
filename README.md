@@ -47,7 +47,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full stack overview.
 
 - Authenticated members can submit supply, facility, apparatus, equipment, technology, and general requests from `/dashboard/requests`.
 - Members can track only their own tickets and see administrator responses.
-- Administrators receive a shared queue, can change priority and status, and can publish progress or resolution notes.
+- Administrators receive a new-request badge, can change priority and status, publish progress or resolution notes, and permanently delete tickets when necessary. The badge clears as soon as an administrator updates the ticket.
 - Ticket records live in Firestore `requestTickets`; access is enforced by authenticated server API routes and all create/update actions are audit logged.
 
 ## Next Steps

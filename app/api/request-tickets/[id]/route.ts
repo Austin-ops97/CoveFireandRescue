@@ -59,6 +59,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         status: validated.status,
         priority: validated.priority,
         adminResponse: validated.adminResponse,
+        adminNotificationUnread: false,
         updatedBy: actor.uid,
         updatedByName: actor.displayName ?? actor.email ?? "Administrator",
         updatedAt: FieldValue.serverTimestamp(),
@@ -83,6 +84,40 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (error instanceof RequestTicketValidationError) {
       return badRequest(error.message);
     }
+    return serverAuthErrorResponse(error);
+  }
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  try {
+    const actor = await requireServerRole(request, ["admin"]);
+    const { id } = await context.params;
+    const ticketId = id?.trim();
+
+    if (!ticketId) {
+      return badRequest("Request ticket id is required.");
+    }
+
+    const docRef = adminDb.collection(COLLECTIONS.requestTickets).doc(ticketId);
+    const existing = await docRef.get();
+    if (!existing.exists) {
+      return NextResponse.json({ error: "Request ticket not found." }, { status: 404 });
+    }
+
+    const ticket = serializeRequestTicketDoc(existing);
+    await docRef.delete();
+
+    await writeAuditLog({
+      action: "request_ticket.deleted",
+      actorUid: actor.uid,
+      actorRole: actor.role!,
+      targetType: "requestTicket",
+      targetId: ticket.id,
+      message: `Permanently deleted ${ticket.ticketNumber}: ${ticket.title}`,
+    });
+
+    return NextResponse.json({ deleted: true, id: ticket.id });
+  } catch (error) {
     return serverAuthErrorResponse(error);
   }
 }

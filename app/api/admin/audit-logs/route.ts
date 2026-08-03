@@ -17,6 +17,7 @@ const VISIBLE_AUDIT_ACTIONS: AuditAction[] = [
   "checklist.submission.review_acknowledged",
   "request_ticket.created",
   "request_ticket.updated",
+  "request_ticket.deleted",
 ];
 
 function serializeTimestamp(value: unknown): unknown {

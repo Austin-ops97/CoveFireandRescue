@@ -70,6 +70,7 @@ export async function POST(request: Request) {
       ticketNumber,
       ...validated,
       status: "open",
+      adminNotificationUnread: true,
       submittedBy: actor.uid,
       submittedByName: actor.displayName ?? actor.email ?? "Department member",
       submittedByEmail: actor.email,

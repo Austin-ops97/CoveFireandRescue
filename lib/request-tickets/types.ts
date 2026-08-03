@@ -19,6 +19,7 @@ export type RequestTicket = {
   location?: string | null;
   priority: RequestTicketPriority;
   status: RequestTicketStatus;
+  adminNotificationUnread: boolean;
   submittedBy: string;
   submittedByName?: string | null;
   submittedByEmail?: string | null;
