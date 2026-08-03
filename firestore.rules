@@ -114,5 +114,11 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false;
     }
+
+    // Request tickets are read and written only through authenticated server API routes.
+    // This prevents clients from bypassing requester scoping or admin-only status updates.
+    match /requestTickets/{id} {
+      allow read, write: if false;
+    }
   }
 }

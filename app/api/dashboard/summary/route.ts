@@ -24,6 +24,8 @@ import {
 import { serializeEquipmentDoc } from "@/lib/equipment/server";
 import { serializeFleetDoc } from "@/lib/fleet/server";
 import { serializeLeadershipDoc } from "@/lib/leadership/server";
+import { serializeRequestTicketDoc } from "@/lib/request-tickets/server";
+import { isRequestTicketOpen } from "@/lib/request-tickets/types";
 import { listStoredFilesByModule } from "@/lib/storage/server";
 
 const RECENT_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -55,6 +57,7 @@ async function buildAdminSummary(): Promise<DashboardSummaryAdmin> {
     submissionSnapshot,
     trainingSnapshot,
     equipmentSnapshot,
+    requestTicketSnapshot,
     documentFiles,
   ] = await Promise.all([
     adminDb.collection(COLLECTIONS.fleet).limit(200).get(),
@@ -64,6 +67,7 @@ async function buildAdminSummary(): Promise<DashboardSummaryAdmin> {
     adminDb.collection(COLLECTIONS.checklistSubmissions).limit(300).get(),
     adminDb.collection(COLLECTIONS.trainingRecords).limit(300).get(),
     adminDb.collection(COLLECTIONS.equipment).limit(300).get(),
+    adminDb.collection(COLLECTIONS.requestTickets).limit(500).get(),
     listStoredFilesByModule("documents"),
   ]);
 
@@ -104,6 +108,10 @@ async function buildAdminSummary(): Promise<DashboardSummaryAdmin> {
     .map((doc) => serializeEquipmentDoc(doc))
     .filter((item) => item.status !== "retired").length;
 
+  const activeRequests = requestTicketSnapshot.docs
+    .map((doc) => serializeRequestTicketDoc(doc))
+    .filter((item) => isRequestTicketOpen(item.status));
+
   return {
     role: "admin",
     fleetCount,
@@ -115,6 +123,8 @@ async function buildAdminSummary(): Promise<DashboardSummaryAdmin> {
     documentCount: documentFiles.length,
     trainingRecordCount,
     equipmentCount,
+    openRequestCount: activeRequests.length,
+    urgentRequestCount: activeRequests.filter((item) => item.priority === "urgent").length,
     recentSubmissions: submissions.slice(0, RECENT_LIST_LIMIT).map((item) =>
       toDashboardRecentSubmission(
         item,
@@ -125,7 +135,7 @@ async function buildAdminSummary(): Promise<DashboardSummaryAdmin> {
 }
 
 async function buildMemberSummary(user: VerifiedServerUser): Promise<DashboardSummaryMember> {
-  const [templateSnapshot, submissionSnapshot] = await Promise.all([
+  const [templateSnapshot, submissionSnapshot, requestTicketSnapshot] = await Promise.all([
     adminDb
       .collection(COLLECTIONS.checklistTemplates)
       .where("active", "==", true)
@@ -133,6 +143,11 @@ async function buildMemberSummary(user: VerifiedServerUser): Promise<DashboardSu
       .limit(100)
       .get(),
     adminDb.collection(COLLECTIONS.checklistSubmissions).limit(300).get(),
+    adminDb
+      .collection(COLLECTIONS.requestTickets)
+      .where("submittedBy", "==", user.uid)
+      .limit(300)
+      .get(),
   ]);
 
   const templateMap = buildTemplateMap(templateSnapshot.docs);
@@ -153,11 +168,16 @@ async function buildMemberSummary(user: VerifiedServerUser): Promise<DashboardSu
     submissionNeedsReview(item, templateMap.get(item.templateId))
   );
 
+  const myOpenRequestCount = requestTicketSnapshot.docs
+    .map((doc) => serializeRequestTicketDoc(doc))
+    .filter((item) => isRequestTicketOpen(item.status)).length;
+
   return {
     role: "member",
     availableTemplateCount,
     myRecentSubmissionCount: myRecentSubmissions.length,
     myFailedSubmissionCount: myFailedSubmissions.length,
+    myOpenRequestCount,
     recentSubmissions: mySubmissions.slice(0, RECENT_LIST_LIMIT).map((item) =>
       toDashboardRecentSubmission(
         item,

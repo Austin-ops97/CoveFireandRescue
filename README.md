@@ -43,6 +43,13 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full stack overview.
 - `AuthProvider` + dashboard `RequireAuth`
 - `GET /api/health` — config status (no secrets)
 
+## Member request tickets
+
+- Authenticated members can submit supply, facility, apparatus, equipment, technology, and general requests from `/dashboard/requests`.
+- Members can track only their own tickets and see administrator responses.
+- Administrators receive a shared queue, can change priority and status, and can publish progress or resolution notes.
+- Ticket records live in Firestore `requestTickets`; access is enforced by authenticated server API routes and all create/update actions are audit logged.
+
 ## Next Steps
 
 1. Create Firebase project + enable Email/Password auth

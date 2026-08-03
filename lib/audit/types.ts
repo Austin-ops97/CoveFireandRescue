@@ -35,6 +35,8 @@ export type AuditAction =
   | "checklist.submission.purged"
   | "checklist.notification.acknowledged"
   | "checklist.submission.review_acknowledged"
+  | "request_ticket.created"
+  | "request_ticket.updated"
   | "announcement.created"
   | "announcement.updated"
   | "announcement.deleted"

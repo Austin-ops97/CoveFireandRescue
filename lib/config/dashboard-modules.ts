@@ -26,6 +26,13 @@ export const dashboardModuleGroups: ModuleGroup[] = [
     description: "Digital rounds, inspections, and review workflows.",
     modules: [
       {
+        title: "Request Tickets",
+        navLabel: "Requests",
+        description: "Submit supply, facility, equipment, and other needs to administrators.",
+        href: "/dashboard/requests",
+        status: "active",
+      },
+      {
         title: "Digital Rounds / Checklists",
         navLabel: "Submit checklist",
         description: "Complete apparatus, station, equipment, and custom inspection checklists.",

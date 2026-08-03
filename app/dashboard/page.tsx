@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function DashboardPage() {
   return (
-    <RequireAuth allowedRoles={["admin", "member"]}>
+    <RequireAuth allowedRoles={["admin", "editor", "viewer", "member"]}>
       <PageShell
         title="Member Dashboard"
         description="Internal tools for Cove Fire & Rescue members and administrators."
