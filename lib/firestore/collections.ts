@@ -13,6 +13,8 @@ export const COLLECTIONS = {
   trainingRecords: "trainingRecords",
   equipment: "equipment",
   requestTickets: "requestTickets",
+  nationalNightOutRequests: "nationalNightOutRequests",
+  siteSettings: "siteSettings",
   auditLogs: "auditLogs",
   storageFolders: "storageFolders",
   storageFiles: "storageFiles",
@@ -56,6 +58,12 @@ export const equipmentDocPath = (id: string): string => `${COLLECTIONS.equipment
 
 export const requestTicketDocPath = (id: string): string =>
   `${COLLECTIONS.requestTickets}/${id}`;
+
+export const nationalNightOutRequestDocPath = (id: string): string =>
+  `${COLLECTIONS.nationalNightOutRequests}/${id}`;
+
+export const siteSettingsDocPath = (id: string): string =>
+  `${COLLECTIONS.siteSettings}/${id}`;
 
 export const auditLogDocPath = (id: string): string =>
   `${COLLECTIONS.auditLogs}/${id}`;

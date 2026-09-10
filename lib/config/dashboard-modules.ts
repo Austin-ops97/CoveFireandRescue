@@ -132,6 +132,13 @@ export const dashboardModuleGroups: ModuleGroup[] = [
         href: "/dashboard/contact-submissions",
         status: "admin_only",
       },
+      {
+        title: "National Night Out Requests",
+        navLabel: "Night Out",
+        description: "Enable visit requests and review National Night Out neighborhood submissions.",
+        href: "/dashboard/national-night-out",
+        status: "admin_only",
+      },
     ],
   },
   {

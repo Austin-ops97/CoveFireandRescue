@@ -6,10 +6,12 @@ import { HomeJoinSection } from "@/components/site/HomeJoinSection";
 import { HomeQuickActions } from "@/components/site/HomeQuickActions";
 import { HomeServicesSection } from "@/components/site/HomeServicesSection";
 import { HomeStatsBar } from "@/components/site/HomeStatsBar";
+import { NationalNightOutBanner } from "@/components/site/NationalNightOutBanner";
 
 export default function HomePage() {
   return (
     <>
+      <NationalNightOutBanner />
       <HomeHero />
       <HomeQuickActions />
       <HomeStatsBar />

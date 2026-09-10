@@ -100,6 +100,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // National Night Out requests and feature settings are server-only (Admin SDK).
+    match /nationalNightOutRequests/{id} {
+      allow read, write: if false;
+    }
+
+    match /siteSettings/{id} {
+      allow read, write: if false;
+    }
+
     match /gallery/{id} {
       allow read: if resource.data.visible == true || isAdmin();
       allow write: if isAdmin();
