@@ -76,6 +76,20 @@ Required for file uploads. Add when B2 is ready (see [BACKBLAZE_B2_SETUP.md](./B
 | `B2_ENDPOINT` | API endpoint (e.g. `https://api.backblazeb2.com`) |
 | `B2_PUBLIC_BASE_URL` | Public URL base for browser-accessible files |
 
+## cPanel / HostGator email provisioning (server-only)
+
+Required to create department mailboxes when adding portal members. Never use `NEXT_PUBLIC_` for these.
+
+| Variable | Description |
+|----------|-------------|
+| `CPANEL_API_TOKEN` | API token from HostGator cPanel → **Security** → **Manage API Tokens** |
+| `CPANEL_USERNAME` | cPanel username (not the email address) |
+| `CPANEL_HOST` | Server hostname only (e.g. `gator4123.hostgator.com`) — no `https://`, no path |
+| `CPANEL_PORT` | Usually `2083` |
+| `CPANEL_EMAIL_DOMAIN` | Mail domain (e.g. `covefireandrescue.org`) |
+
+If member creation fails with an unexpected/HTML email-server response, regenerate the API token in HostGator, update `CPANEL_*` in Vercel, and redeploy.
+
 ## Verify after deploy
 
 ### Public health check (no secrets)

@@ -38,10 +38,23 @@ export class CpanelError extends Error {
   }
 }
 
+function normalizeCpanelHost(rawHost: string): string {
+  const trimmed = rawHost.trim();
+  try {
+    if (/^https?:\/\//i.test(trimmed)) {
+      return new URL(trimmed).hostname;
+    }
+  } catch {
+    // Fall through to slash/path cleanup below.
+  }
+
+  return trimmed.replace(/\/.*$/, "").replace(/:\d+$/, "");
+}
+
 function getCpanelEnvConfig(): CpanelEnvConfig {
   const apiToken = process.env.CPANEL_API_TOKEN?.trim();
   const username = process.env.CPANEL_USERNAME?.trim();
-  const host = process.env.CPANEL_HOST?.trim();
+  const hostRaw = process.env.CPANEL_HOST?.trim();
   const portRaw = process.env.CPANEL_PORT?.trim();
   const emailDomain = process.env.CPANEL_EMAIL_DOMAIN?.trim();
 
@@ -54,6 +67,11 @@ function getCpanelEnvConfig(): CpanelEnvConfig {
     );
   }
 
+  const host = normalizeCpanelHost(hostRaw!);
+  if (!host) {
+    throw new CpanelError(503, "cpanel_invalid_host", "Email server host is invalid.");
+  }
+
   const port = Number(portRaw);
   if (!Number.isFinite(port) || port <= 0) {
     throw new CpanelError(503, "cpanel_invalid_port", "Email server configuration is invalid.");
@@ -62,7 +80,7 @@ function getCpanelEnvConfig(): CpanelEnvConfig {
   return {
     apiToken: apiToken!,
     username: username!,
-    host: host!,
+    host,
     port,
     emailDomain: emailDomain!,
   };
@@ -127,15 +145,44 @@ async function cpanelUapiCall(
     );
   }
 
+  const contentType = response.headers.get("content-type") ?? "";
+  const bodyText = await response.text();
+
+  if (response.status === 401 || response.status === 403) {
+    console.error("cPanel API auth failed:", {
+      status: response.status,
+      module,
+      func,
+      contentType,
+    });
+    throw new CpanelError(
+      502,
+      "cpanel_auth_failed",
+      "Email server authentication failed. Check the cPanel API token and username in Vercel, or regenerate the token in HostGator cPanel."
+    );
+  }
+
   let payload: CpanelUapiResponse;
   try {
-    payload = (await response.json()) as CpanelUapiResponse;
+    payload = JSON.parse(bodyText) as CpanelUapiResponse;
   } catch {
-    console.error("cPanel API returned invalid JSON:", response.status);
+    const looksLikeHtml =
+      /<html|<!doctype html|<title|cpanel login|security token/i.test(bodyText) ||
+      contentType.includes("text/html");
+    console.error("cPanel API returned invalid JSON:", {
+      status: response.status,
+      module,
+      func,
+      contentType,
+      looksLikeHtml,
+      bodyPreview: bodyText.slice(0, 200),
+    });
     throw new CpanelError(
       502,
       "cpanel_invalid_response",
-      "Received an unexpected response from the email server."
+      looksLikeHtml
+        ? "Email server returned a login/HTML page instead of an API response. Usually the HostGator cPanel API token, username, or host is wrong or expired — update CPANEL_* in Vercel after regenerating the token."
+        : "Received an unexpected response from the email server."
     );
   }
 
