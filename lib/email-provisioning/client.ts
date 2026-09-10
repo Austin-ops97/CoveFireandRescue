@@ -18,6 +18,7 @@ async function readApiError(response: Response): Promise<string> {
 }
 
 import type { MailClientSettings } from "@/lib/email-provisioning/mail-settings";
+import type { CpanelConnectivityProbe } from "@/lib/cpanel/types";
 
 export type EmailProvisioningConfig = {
   configured: boolean;
@@ -25,6 +26,7 @@ export type EmailProvisioningConfig = {
   quotaOptions: Array<{ value: number; label: string }>;
   supportsUnlimited: boolean;
   mailClientSettings: MailClientSettings | null;
+  connectivity: CpanelConnectivityProbe;
 };
 
 export type DepartmentEmailSuggestion = {

@@ -1,5 +1,9 @@
 import "server-only";
 
+import type { CpanelConnectivityProbe } from "@/lib/cpanel/types";
+
+export type { CpanelConnectivityProbe } from "@/lib/cpanel/types";
+
 const CPANEL_ENV_KEYS = [
   "CPANEL_API_TOKEN",
   "CPANEL_USERNAME",
@@ -118,22 +122,27 @@ async function cpanelUapiCall(
   params: Record<string, string | number>
 ): Promise<CpanelUapiResponse> {
   const config = getCpanelEnvConfig();
+  // POST keeps passwords out of the query string (HostGator/WAF often returns
+  // HTML login pages for GET requests that include password=…).
   const url = new URL(
     `/execute/${encodeURIComponent(module)}/${encodeURIComponent(func)}`,
     `https://${config.host}:${config.port}`
   );
 
+  const body = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, String(value));
+    body.set(key, String(value));
   }
 
   let response: Response;
   try {
     response = await fetch(url.toString(), {
-      method: "GET",
+      method: "POST",
       headers: {
         Authorization: `cpanel ${config.username}:${config.apiToken}`,
+        "Content-Type": "application/x-www-form-urlencoded",
       },
+      body: body.toString(),
       cache: "no-store",
     });
   } catch (error) {
@@ -199,6 +208,82 @@ async function cpanelUapiCall(
   }
 
   return payload;
+}
+
+/**
+ * Read-only connectivity check against HostGator/cPanel.
+ * Never returns secrets — only host, domain, and a safe error message.
+ */
+export async function probeCpanelConnectivity(): Promise<CpanelConnectivityProbe> {
+  if (!isCpanelConfigured()) {
+    return {
+      configured: false,
+      ok: false,
+      code: "cpanel_not_configured",
+      message: "Department email provisioning is not configured on this server.",
+      host: null,
+      emailDomain: null,
+      mailboxCount: null,
+    };
+  }
+
+  let config: CpanelEnvConfig;
+  try {
+    config = getCpanelEnvConfig();
+  } catch (error) {
+    if (error instanceof CpanelError) {
+      return {
+        configured: false,
+        ok: false,
+        code: error.code,
+        message: error.message,
+        host: null,
+        emailDomain: process.env.CPANEL_EMAIL_DOMAIN?.trim() || null,
+        mailboxCount: null,
+      };
+    }
+    throw error;
+  }
+
+  try {
+    const response = await cpanelUapiCall("Email", "list_pops", {
+      domain: config.emailDomain,
+    });
+    const mailboxCount = Array.isArray(response.data) ? response.data.length : null;
+
+    return {
+      configured: true,
+      ok: true,
+      code: null,
+      message: null,
+      host: config.host,
+      emailDomain: config.emailDomain,
+      mailboxCount,
+    };
+  } catch (error) {
+    if (error instanceof CpanelError) {
+      return {
+        configured: true,
+        ok: false,
+        code: error.code,
+        message: error.message,
+        host: config.host,
+        emailDomain: config.emailDomain,
+        mailboxCount: null,
+      };
+    }
+
+    console.error("cPanel connectivity probe failed:", error);
+    return {
+      configured: true,
+      ok: false,
+      code: "cpanel_probe_failed",
+      message: "Could not verify the email server connection.",
+      host: config.host,
+      emailDomain: config.emailDomain,
+      mailboxCount: null,
+    };
+  }
 }
 
 export async function cpanelAddEmailPop(

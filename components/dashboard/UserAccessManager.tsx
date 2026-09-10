@@ -158,10 +158,15 @@ function authStatusVariant(status: AuthProvisioningStatus, user: ManagedUserProf
 
 function validateCreateForm(
   form: CreateUserFormState,
-  emailConfigured: boolean
+  emailConfigured: boolean,
+  connectivityOk: boolean
 ): string | null {
   if (!emailConfigured) {
     return "Department email provisioning is not configured on this server.";
+  }
+
+  if (!connectivityOk) {
+    return "Cannot create a user until the HostGator email server connection succeeds. Check CPANEL_* in Vercel.";
   }
 
   if (form.accountType === "alias") {
@@ -247,6 +252,15 @@ export function UserAccessManager() {
           ],
           supportsUnlimited: false,
           mailClientSettings: null,
+          connectivity: {
+            configured: false,
+            ok: false,
+            code: "cpanel_not_configured",
+            message: "Department email provisioning is not configured on this server.",
+            host: null,
+            emailDomain: null,
+            mailboxCount: null,
+          },
         });
       });
   }, []);
@@ -404,7 +418,11 @@ export function UserAccessManager() {
     event.preventDefault();
     setActionError(null);
 
-    const validationError = validateCreateForm(createForm, emailConfig?.configured ?? false);
+    const validationError = validateCreateForm(
+      createForm,
+      emailConfig?.configured ?? false,
+      emailConfig?.connectivity.ok ?? false
+    );
     if (validationError) {
       setActionError(validationError);
       return;
@@ -574,6 +592,41 @@ export function UserAccessManager() {
       </div>
 
       {successMessage && <AlertBanner variant="success">{successMessage}</AlertBanner>}
+
+      {emailConfig?.configured && emailConfig.connectivity && !emailConfig.connectivity.ok && (
+        <AlertBanner variant="warning" title="Email server connection failed">
+          <p className="text-sm">
+            {emailConfig.connectivity.message ??
+              "HostGator is not accepting the cPanel API credentials. Creating users will fail until this is fixed."}
+          </p>
+          <p className="mt-1 text-xs text-brand-gray">
+            {[
+              emailConfig.connectivity.host ? `host: ${emailConfig.connectivity.host}` : null,
+              emailConfig.connectivity.emailDomain
+                ? `domain: ${emailConfig.connectivity.emailDomain}`
+                : null,
+              emailConfig.connectivity.code ? `code: ${emailConfig.connectivity.code}` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        </AlertBanner>
+      )}
+
+      {emailConfig?.configured && emailConfig.connectivity?.ok && (
+        <AlertBanner variant="success" title="Email server connected">
+          <p className="text-sm">
+            HostGator/cPanel API is reachable
+            {emailConfig.connectivity.emailDomain
+              ? ` for ${emailConfig.connectivity.emailDomain}`
+              : ""}
+            {typeof emailConfig.connectivity.mailboxCount === "number"
+              ? ` (${emailConfig.connectivity.mailboxCount} mailbox${emailConfig.connectivity.mailboxCount === 1 ? "" : "es"})`
+              : ""}
+            .
+          </p>
+        </AlertBanner>
+      )}
 
       {emailSetupShareEmail && emailConfig?.mailClientSettings && !modalMode && (
         <EmailSetupShareCard
@@ -1109,6 +1162,35 @@ export function UserAccessManager() {
               <AlertBanner variant="warning">
                 Department email provisioning is not configured on this server.
               </AlertBanner>
+            )}
+
+            {emailConfig?.configured && emailConfig.connectivity && !emailConfig.connectivity.ok && (
+              <AlertBanner variant="warning">
+                {emailConfig.connectivity.message ??
+                  "HostGator email server connection failed. Check CPANEL_API_TOKEN, CPANEL_USERNAME, and CPANEL_HOST in Vercel, then redeploy."}
+                {emailConfig.connectivity.host
+                  ? ` (host: ${emailConfig.connectivity.host}`
+                  : ""}
+                {emailConfig.connectivity.host && emailConfig.connectivity.code
+                  ? `, code: ${emailConfig.connectivity.code})`
+                  : emailConfig.connectivity.host
+                    ? ")"
+                    : emailConfig.connectivity.code
+                      ? ` (code: ${emailConfig.connectivity.code})`
+                      : ""}
+              </AlertBanner>
+            )}
+
+            {emailConfig?.configured && emailConfig.connectivity?.ok && (
+              <p className="text-sm text-[var(--color-muted)]">
+                Email server connected
+                {emailConfig.connectivity.emailDomain
+                  ? ` · ${emailConfig.connectivity.emailDomain}`
+                  : ""}
+                {typeof emailConfig.connectivity.mailboxCount === "number"
+                  ? ` · ${emailConfig.connectivity.mailboxCount} mailbox${emailConfig.connectivity.mailboxCount === 1 ? "" : "es"}`
+                  : ""}
+              </p>
             )}
 
             {actionError && (
