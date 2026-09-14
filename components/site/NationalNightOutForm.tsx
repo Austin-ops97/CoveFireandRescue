@@ -123,6 +123,12 @@ export function NationalNightOutForm() {
           <>
             {" "}
             Your request ID is <span className="font-semibold text-brand-charcoal">{successRequestId}</span>.
+            Save this ID and the email you used so you can check your request status later.
+            <div className="mt-4">
+              <Button href="/national-night-out/status" variant="outline" size="sm">
+                Check Request Status
+              </Button>
+            </div>
           </>
         ) : null}
       </AlertBanner>

@@ -105,6 +105,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Department roster is read/written only through authenticated server API routes.
+    match /rosterMembers/{id} {
+      allow read, write: if false;
+    }
+
     match /siteSettings/{id} {
       allow read, write: if false;
     }
@@ -127,6 +132,11 @@ service cloud.firestore {
     // Request tickets are read and written only through authenticated server API routes.
     // This prevents clients from bypassing requester scoping or admin-only status updates.
     match /requestTickets/{id} {
+      allow read, write: if false;
+    }
+
+    // Department roster is server-only (Admin SDK via /api/roster*).
+    match /rosterMembers/{id} {
       allow read, write: if false;
     }
   }

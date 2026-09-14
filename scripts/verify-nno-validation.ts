@@ -1,6 +1,7 @@
 import {
   NationalNightOutValidationError,
   buildNationalNightOutRequestId,
+  normalizeNationalNightOutStatus,
   validateNationalNightOutPayload,
   validateNationalNightOutSettingsUpdate,
   validateNationalNightOutStatusUpdate,
@@ -59,6 +60,15 @@ assert(
   validateNationalNightOutStatusUpdate({ status: "approved" }).status === "approved",
   "approve status"
 );
+assert(
+  validateNationalNightOutStatusUpdate({ status: "under_review" }).status === "under_review",
+  "under review status"
+);
+assert(
+  validateNationalNightOutStatusUpdate({ status: "pending" }).status === "submitted",
+  "legacy pending maps to submitted"
+);
+assert(normalizeNationalNightOutStatus("pending") === "submitted", "normalize pending");
 assert(validateNationalNightOutSettingsUpdate({ enabled: true }).enabled === true, "settings enabled");
 assert(buildNationalNightOutRequestId("abcdef123").startsWith("NNO-ABCDEF"), "request id format");
 

@@ -6,6 +6,9 @@ import {
   assertWithinNationalNightOutRateLimit,
 } from "../lib/national-night-out/rate-limit";
 import {
+  shouldSendNationalNightOutStatusNotification,
+} from "../lib/national-night-out/notifications";
+import {
   buildNationalNightOutRequestId,
   validateNationalNightOutPayload,
   validateNationalNightOutSettingsUpdate,
@@ -53,7 +56,9 @@ function submitRequest(payload: unknown) {
     accessInstructions: validated.accessInstructions ?? "",
     comments: validated.comments ?? "",
     disclaimerAccepted: true,
-    status: "pending",
+    status: "submitted",
+    adminNotes: "",
+    lastNotifiedStatus: "submitted",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -64,13 +69,20 @@ function submitRequest(payload: unknown) {
 function setStatus(id: string, status: NationalNightOutStatus) {
   const existing = db.requests.get(id);
   if (!existing) throw new Error("NOT_FOUND");
-  const next = {
+  const nextStatus = validateNationalNightOutStatusUpdate({ status }).status;
+  const shouldNotify = shouldSendNationalNightOutStatusNotification({
+    previousStatus: existing.status,
+    nextStatus,
+    lastNotifiedStatus: existing.lastNotifiedStatus,
+  });
+  const next: NationalNightOutRequestRecord = {
     ...existing,
-    status: validateNationalNightOutStatusUpdate({ status }).status,
+    status: nextStatus,
     updatedAt: new Date().toISOString(),
+    lastNotifiedStatus: shouldNotify ? nextStatus : existing.lastNotifiedStatus,
   };
   db.requests.set(id, next);
-  return next;
+  return { record: next, notified: shouldNotify };
 }
 
 function deleteRequest(id: string) {
@@ -112,22 +124,33 @@ assert(bannerVisible === true, "banner visible when enabled");
 
 // Public submits
 const created = submitRequest(payload);
-assert(created.status === "pending", "initial pending");
+assert(created.status === "submitted", "initial submitted");
 assert(created.disclaimerAccepted === true, "disclaimer stored");
 assert(created.accessInstructions === "Call at gate", "access preserved");
 assert(created.requestId.startsWith("NNO-"), "request id generated");
 
-// Admin sees pending list
-const pending = [...db.requests.values()].filter((item) => item.status === "pending");
-assert(pending.length === 1, "admin sees pending");
+// Admin sees submitted list
+const submitted = [...db.requests.values()].filter((item) => item.status === "submitted");
+assert(submitted.length === 1, "admin sees submitted");
 
-// Admin opens and approves
+// Admin opens and marks under review
+const underReview = setStatus(created.id, "under_review");
+assert(underReview.record.status === "under_review", "under review saved");
+assert(underReview.notified === true, "under review notified");
+
+// Duplicate under review does not notify again
+const underReviewAgain = setStatus(created.id, "under_review");
+assert(underReviewAgain.notified === false, "duplicate under review not notified");
+
+// Admin approves
 const approved = setStatus(created.id, "approved");
-assert(approved.status === "approved", "approved saved");
+assert(approved.record.status === "approved", "approved saved");
+assert(approved.notified === true, "approved notified");
 
 // Admin can later deny (accidental correction)
 const denied = setStatus(created.id, "denied");
-assert(denied.status === "denied", "denied saved");
+assert(denied.record.status === "denied", "denied saved");
+assert(denied.notified === true, "denied notified");
 
 // Disable feature — previous requests remain
 db.settings = validateNationalNightOutSettingsUpdate({ enabled: false });

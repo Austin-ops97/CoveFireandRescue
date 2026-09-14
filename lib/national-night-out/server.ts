@@ -1,20 +1,29 @@
 import "server-only";
 
 import { Timestamp, type DocumentSnapshot } from "firebase-admin/firestore";
-import {
-  NNO_STATUSES,
-  type NationalNightOutRequestRecord,
-  type NationalNightOutSettings,
-  type NationalNightOutStatus,
+import type {
+  NationalNightOutPublicStatus,
+  NationalNightOutRequestRecord,
+  NationalNightOutSettings,
+  NationalNightOutStatus,
 } from "./types";
+import { normalizeNationalNightOutStatus } from "./validation";
 
 export {
   NationalNightOutValidationError,
   buildNationalNightOutRequestId,
+  normalizeNationalNightOutStatus,
   validateNationalNightOutPayload,
   validateNationalNightOutSettingsUpdate,
+  validateNationalNightOutStatusLookup,
   validateNationalNightOutStatusUpdate,
 } from "./validation";
+
+export {
+  emailsMatchForStatusLookup,
+  shouldSendNationalNightOutStatusNotification,
+  toPublicNationalNightOutStatus,
+} from "./notifications";
 
 function serializeTimestamp(value: unknown): unknown {
   if (value instanceof Timestamp) {
@@ -23,11 +32,9 @@ function serializeTimestamp(value: unknown): unknown {
   return value ?? null;
 }
 
-function readStatus(value: unknown): NationalNightOutStatus {
-  if (typeof value === "string" && NNO_STATUSES.includes(value as NationalNightOutStatus)) {
-    return value as NationalNightOutStatus;
-  }
-  return "pending";
+function readOptionalNotifiedStatus(value: unknown): NationalNightOutStatus | null {
+  if (value === null || value === undefined || value === "") return null;
+  return normalizeNationalNightOutStatus(value);
 }
 
 export function serializeNationalNightOutRequestDoc(
@@ -59,7 +66,10 @@ export function serializeNationalNightOutRequestDoc(
       typeof data.accessInstructions === "string" ? data.accessInstructions : "",
     comments: typeof data.comments === "string" ? data.comments : "",
     disclaimerAccepted: data.disclaimerAccepted === true,
-    status: readStatus(data.status),
+    status: normalizeNationalNightOutStatus(data.status),
+    adminNotes: typeof data.adminNotes === "string" ? data.adminNotes : "",
+    lastNotifiedStatus: readOptionalNotifiedStatus(data.lastNotifiedStatus),
+    lastNotifiedAt: serializeTimestamp(data.lastNotifiedAt),
     createdAt: serializeTimestamp(data.createdAt),
     updatedAt: serializeTimestamp(data.updatedAt),
   };
@@ -82,3 +92,6 @@ export function nationalNightOutSortTime(record: NationalNightOutRequestRecord):
   }
   return 0;
 }
+
+// Re-export types used only for documentation clarity in this module.
+export type { NationalNightOutPublicStatus };

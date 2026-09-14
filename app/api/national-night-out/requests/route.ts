@@ -2,6 +2,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firestore/collections";
+import { sendNationalNightOutStatusEmail } from "@/lib/email/national-night-out";
 import {
   assertWithinNationalNightOutRateLimit,
   getClientIpFromRequest,
@@ -9,10 +10,25 @@ import {
 import {
   NationalNightOutValidationError,
   buildNationalNightOutRequestId,
+  serializeNationalNightOutRequestDoc,
   serializeNationalNightOutSettings,
   validateNationalNightOutPayload,
 } from "@/lib/national-night-out/server";
 import { NATIONAL_NIGHT_OUT_SETTINGS_DOC_ID } from "@/lib/national-night-out/types";
+
+function statusPageUrlFromRequest(request: Request): string | null {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+  if (configured) {
+    return `${configured}/national-night-out/status`;
+  }
+
+  try {
+    const url = new URL(request.url);
+    return `${url.origin}/national-night-out/status`;
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -100,10 +116,42 @@ export async function POST(request: Request) {
       accessInstructions: validated.accessInstructions ?? "",
       comments: validated.comments ?? "",
       disclaimerAccepted: true,
-      status: "pending",
+      status: "submitted",
+      adminNotes: "",
+      lastNotifiedStatus: null,
+      lastNotifiedAt: null,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
+
+    const record = serializeNationalNightOutRequestDoc(await docRef.get());
+
+    // Confirmation email for newly submitted requests (skipped in dry-run / without API key).
+    const mailResult = await sendNationalNightOutStatusEmail({
+      request: record,
+      status: "submitted",
+      statusPageUrl: statusPageUrlFromRequest(request),
+    });
+
+    if (mailResult.ok && !mailResult.skipped) {
+      await docRef.set(
+        {
+          lastNotifiedStatus: "submitted",
+          lastNotifiedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } else if (mailResult.ok && mailResult.dryRun) {
+      // In dry-run, still record that we would have notified for this status
+      // so duplicate prevention logic can be exercised in tests/dev.
+      await docRef.set(
+        {
+          lastNotifiedStatus: "submitted",
+          lastNotifiedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
 
     return NextResponse.json(
       {

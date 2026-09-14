@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isTransactionalEmailConfigured } from "@/lib/email/config";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { isB2Configured } from "@/lib/storage/b2";
@@ -10,5 +11,6 @@ export async function GET() {
     firebaseClientConfigured: isFirebaseConfigured(),
     firebaseAdminConfigured: isFirebaseAdminConfigured(),
     b2Configured: isB2Configured(),
+    transactionalEmailConfigured: isTransactionalEmailConfigured(),
   });
 }

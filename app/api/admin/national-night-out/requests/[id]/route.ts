@@ -2,11 +2,13 @@ import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/audit/server";
 import { requireServerRole, serverAuthErrorResponse } from "@/lib/auth/server";
+import { sendNationalNightOutStatusEmail } from "@/lib/email/national-night-out";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firestore/collections";
 import {
   NationalNightOutValidationError,
   serializeNationalNightOutRequestDoc,
+  shouldSendNationalNightOutStatusNotification,
   validateNationalNightOutStatusUpdate,
 } from "@/lib/national-night-out/server";
 import { NNO_STATUS_LABELS } from "@/lib/national-night-out/types";
@@ -17,6 +19,20 @@ type RouteContext = {
 
 function badRequest(message: string): Response {
   return NextResponse.json({ error: message }, { status: 400 });
+}
+
+function statusPageUrlFromRequest(request: Request): string | null {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+  if (configured) {
+    return `${configured}/national-night-out/status`;
+  }
+
+  try {
+    const url = new URL(request.url);
+    return `${url.origin}/national-night-out/status`;
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(request: Request, context: RouteContext) {
@@ -78,29 +94,86 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const previous = serializeNationalNightOutRequestDoc(existing);
+    const statusChanged = previous.status !== validated.status;
+    const notesChanged =
+      validated.adminNotes !== undefined && validated.adminNotes !== previous.adminNotes;
 
-    await docRef.set(
-      {
+    if (!statusChanged && !notesChanged) {
+      return NextResponse.json({ request: previous, notificationSent: false });
+    }
+
+    const updatePayload: Record<string, unknown> = {
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: actor.uid,
+      updatedByName: actor.displayName ?? actor.email ?? "Administrator",
+    };
+
+    if (statusChanged) {
+      updatePayload.status = validated.status;
+    }
+
+    if (validated.adminNotes !== undefined) {
+      updatePayload.adminNotes = validated.adminNotes;
+    }
+
+    await docRef.set(updatePayload, { merge: true });
+
+    let updated = serializeNationalNightOutRequestDoc(await docRef.get());
+
+    let notificationSent = false;
+
+    // Notify only when status actually changes to a new value that has not
+    // already been emailed for this request (avoids duplicate notifications).
+    if (
+      statusChanged &&
+      shouldSendNationalNightOutStatusNotification({
+        previousStatus: previous.status,
+        nextStatus: validated.status,
+        lastNotifiedStatus: updated.lastNotifiedStatus,
+      })
+    ) {
+      const mailResult = await sendNationalNightOutStatusEmail({
+        request: updated,
         status: validated.status,
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: actor.uid,
-        updatedByName: actor.displayName ?? actor.email ?? "Administrator",
-      },
-      { merge: true }
-    );
+        statusPageUrl: statusPageUrlFromRequest(request),
+      });
 
-    const updated = serializeNationalNightOutRequestDoc(await docRef.get());
+      if (mailResult.ok) {
+        notificationSent = !mailResult.skipped || mailResult.dryRun;
+        await docRef.set(
+          {
+            lastNotifiedStatus: validated.status,
+            lastNotifiedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        updated = serializeNationalNightOutRequestDoc(await docRef.get());
 
-    await writeAuditLog({
-      action: "national_night_out.request_status_updated",
-      actorUid: actor.uid,
-      actorRole: actor.role!,
-      targetType: "nationalNightOutRequest",
-      targetId: updated.id,
-      message: `Updated ${updated.requestId} from ${NNO_STATUS_LABELS[previous.status]} to ${NNO_STATUS_LABELS[updated.status]}`,
-    });
+        await writeAuditLog({
+          action: "national_night_out.status_notification_sent",
+          actorUid: actor.uid,
+          actorRole: actor.role!,
+          targetType: "nationalNightOutRequest",
+          targetId: updated.id,
+          message: mailResult.dryRun
+            ? `Dry-run status notification for ${updated.requestId} → ${NNO_STATUS_LABELS[validated.status]}`
+            : `Sent status notification for ${updated.requestId} → ${NNO_STATUS_LABELS[validated.status]}`,
+        });
+      }
+    }
 
-    return NextResponse.json({ request: updated });
+    if (statusChanged) {
+      await writeAuditLog({
+        action: "national_night_out.request_status_updated",
+        actorUid: actor.uid,
+        actorRole: actor.role!,
+        targetType: "nationalNightOutRequest",
+        targetId: updated.id,
+        message: `Updated ${updated.requestId} from ${NNO_STATUS_LABELS[previous.status]} to ${NNO_STATUS_LABELS[updated.status]}`,
+      });
+    }
+
+    return NextResponse.json({ request: updated, notificationSent });
   } catch (error) {
     if (error instanceof NationalNightOutValidationError) {
       return badRequest(error.message);

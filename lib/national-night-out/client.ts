@@ -1,6 +1,10 @@
 "use client";
 
-import type { NationalNightOutFormPayload, NationalNightOutSettings } from "./types";
+import type {
+  NationalNightOutFormPayload,
+  NationalNightOutPublicStatus,
+  NationalNightOutSettings,
+} from "./types";
 
 async function readApiError(response: Response): Promise<string> {
   try {
@@ -51,4 +55,26 @@ export async function submitNationalNightOutRequest(
   }
 
   return { id: data.id, requestId: data.requestId };
+}
+
+export async function lookupNationalNightOutStatus(payload: {
+  requestId: string;
+  email: string;
+}): Promise<NationalNightOutPublicStatus> {
+  const response = await fetch("/api/national-night-out/status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+
+  const data = (await response.json()) as { status?: NationalNightOutPublicStatus };
+  if (!data.status) {
+    throw new Error("We couldn’t find a request matching that Request ID and email address.");
+  }
+
+  return data.status;
 }

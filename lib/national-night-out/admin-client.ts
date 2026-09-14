@@ -62,14 +62,18 @@ export async function fetchAdminNationalNightOutRequests(): Promise<NationalNigh
 
 export async function updateNationalNightOutRequestStatus(
   id: string,
-  status: NationalNightOutStatus
+  status: NationalNightOutStatus,
+  adminNotes?: string
 ): Promise<NationalNightOutRequestRecord> {
   const response = await authenticatedFetch(
     `/api/admin/national-night-out/requests/${encodeURIComponent(id)}`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({
+        status,
+        ...(adminNotes !== undefined ? { adminNotes } : {}),
+      }),
     }
   );
 

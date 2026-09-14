@@ -90,6 +90,21 @@ Required to create department mailboxes when adding portal members. Never use `N
 
 If member creation fails with an unexpected/HTML email-server response, regenerate the API token in HostGator, update `CPANEL_*` in Vercel, and redeploy.
 
+## Transactional email / Resend (server-only)
+
+Required to send National Night Out status emails (and future website-generated mail). See [EMAIL_DELIVERABILITY.md](./EMAIL_DELIVERABILITY.md) for DNS steps. Never use `NEXT_PUBLIC_` for these.
+
+| Variable | Description |
+|----------|-------------|
+| `RESEND_API_KEY` | API key from the Resend dashboard |
+| `EMAIL_FROM` | From header, e.g. `Cove Fire & Rescue <noreply@covefireandrescue.org>` |
+| `EMAIL_REPLY_TO` | Reply-To address for requester responses |
+| `EMAIL_DRY_RUN` | Optional. Set `true` to log instead of sending |
+| `EMAIL_SAFE_RECIPIENT` | Optional. Redirect all outbound mail to one test inbox |
+| `EMAIL_ALLOW_NON_PRODUCTION` | Optional. Allow real sends outside production when an API key is present |
+
+Domain verification and SPF/DKIM/DMARC must be completed in Resend + DNS. The app cannot fix DNS.
+
 ## Verify after deploy
 
 ### Public health check (no secrets)
@@ -106,7 +121,8 @@ Example response:
   "service": "cove-fire-rescue",
   "firebaseClientConfigured": true,
   "firebaseAdminConfigured": true,
-  "b2Configured": false
+  "b2Configured": false,
+  "transactionalEmailConfigured": false
 }
 ```
 
@@ -169,3 +185,4 @@ Failure example:
 - [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) — Firebase Console checklist
 - [FIREBASE_ADMIN_ENV.md](./FIREBASE_ADMIN_ENV.md) — Admin credentials and safety rules
 - [BACKBLAZE_B2_SETUP.md](./BACKBLAZE_B2_SETUP.md) — B2 bucket and keys
+- [EMAIL_DELIVERABILITY.md](./EMAIL_DELIVERABILITY.md) — Resend + DNS deliverability

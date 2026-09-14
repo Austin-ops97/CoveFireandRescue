@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "check:env": "node scripts/check-env.mjs",
+    "test:verify": "npx --yes tsx scripts/verify-nno-validation.ts && npx --yes tsx scripts/verify-nno-workflow.ts && npx --yes tsx scripts/verify-nno-status.ts && npx --yes tsx scripts/verify-roster.ts",
     "sync:vercel-firebase": "node scripts/sync-vercel-firebase-env.mjs"
   },
   "dependencies": {
@@ -18,6 +19,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "resend": "^6.28.0",
     "server-only": "^0.0.1"
   },
   "devDependencies": {

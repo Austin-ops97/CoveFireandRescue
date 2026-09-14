@@ -67,10 +67,16 @@ export function NationalNightOutRequestPage() {
       </section>
 
       <section className="mb-12">
-        <SectionHeader
-          title="Request a Department Visit"
-          subtitle="Provide event details so the department can review availability."
-        />
+        <div className="mb-8 flex flex-col gap-3 sm:mb-10 sm:flex-row sm:items-start sm:justify-between">
+          <SectionHeader
+            title="Request a Department Visit"
+            subtitle="Provide event details so the department can review availability."
+            className="mb-0 sm:mb-0"
+          />
+          <Button href="/national-night-out/status" variant="outline" size="sm" className="shrink-0">
+            Check Request Status
+          </Button>
+        </div>
 
         {loading ? (
           <Card>
@@ -84,9 +90,12 @@ export function NationalNightOutRequestPage() {
           <AlertBanner variant="info" title="Requests are not open">
             National Night Out visit requests are not currently being accepted. Please check back
             later, or contact the department for non-emergency questions.
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-3">
               <Button href="/contact" variant="outline" size="sm">
                 Contact the Department
+              </Button>
+              <Button href="/national-night-out/status" variant="ghost" size="sm">
+                Check Request Status
               </Button>
             </div>
           </AlertBanner>
