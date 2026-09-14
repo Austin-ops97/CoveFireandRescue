@@ -90,6 +90,10 @@ Required to create department mailboxes when adding portal members. Never use `N
 
 If member creation fails with an unexpected/HTML email-server response, regenerate the API token in HostGator, update `CPANEL_*` in Vercel, and redeploy.
 
+**Verify connection from the app:** open **Dashboard → Manage Users → Create user**. The form now probes HostGator live and shows either “Email server connected” or the exact connection error (token/host/auth) before you submit.
+
+`GET /api/health` includes `cpanelConfigured` (env vars present only — not a live HostGator probe).
+
 ## Verify after deploy
 
 ### Public health check (no secrets)
@@ -106,7 +110,8 @@ Example response:
   "service": "cove-fire-rescue",
   "firebaseClientConfigured": true,
   "firebaseAdminConfigured": true,
-  "b2Configured": false
+  "b2Configured": false,
+  "cpanelConfigured": true
 }
 ```
 

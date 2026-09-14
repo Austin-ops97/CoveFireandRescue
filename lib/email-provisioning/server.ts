@@ -9,7 +9,9 @@ import {
   cpanelResetEmailPassword,
   cpanelSupportsUnlimitedQuota,
   isCpanelConfigured,
+  probeCpanelConnectivity,
 } from "@/lib/cpanel/server";
+import type { CpanelConnectivityProbe } from "@/lib/cpanel/types";
 import { COLLECTIONS } from "@/lib/firestore/collections";
 import type { VerifiedServerUser } from "@/lib/auth/server";
 import {
@@ -43,6 +45,8 @@ export type EmailProvisioningConfig = {
   quotaOptions: Array<{ value: number; label: string }>;
   supportsUnlimited: boolean;
   mailClientSettings: MailClientSettings | null;
+  /** Live HostGator/cPanel probe — env present does not mean the API works. */
+  connectivity: CpanelConnectivityProbe;
 };
 
 function readMailClientSettingsFromEnv(emailDomain: string): MailClientSettings {
@@ -61,8 +65,12 @@ function readMailClientSettingsFromEnv(emailDomain: string): MailClientSettings 
 
 export async function getEmailProvisioningConfig(): Promise<EmailProvisioningConfig> {
   const configured = isCpanelConfigured();
-  const domain = configured ? process.env.CPANEL_EMAIL_DOMAIN?.trim() ?? null : null;
-  const supportsUnlimited = configured ? await cpanelSupportsUnlimitedQuota() : false;
+  const connectivity = await probeCpanelConnectivity();
+  const domain =
+    connectivity.emailDomain ??
+    (configured ? process.env.CPANEL_EMAIL_DOMAIN?.trim() ?? null : null);
+  const supportsUnlimited =
+    configured && connectivity.ok ? await cpanelSupportsUnlimitedQuota() : false;
 
   const quotaOptions: EmailProvisioningConfig["quotaOptions"] = [
     { value: 1024, label: "1024 MB" },
@@ -80,6 +88,7 @@ export async function getEmailProvisioningConfig(): Promise<EmailProvisioningCon
     quotaOptions,
     supportsUnlimited,
     mailClientSettings: configured && domain ? readMailClientSettingsFromEnv(domain) : null,
+    connectivity,
   };
 }
 
