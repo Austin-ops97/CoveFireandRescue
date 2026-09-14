@@ -55,4 +55,4 @@ export const NATIONAL_NIGHT_OUT_SETTINGS_DOC_ID = "nationalNightOut";
 export const NATIONAL_NIGHT_OUT_DISCLAIMER =
   "Submitting a National Night Out request does not guarantee that the department will be able to attend. Visits are subject to emergency response needs, available time, apparatus availability, and available department personnel.";
 
-export const NATIONAL_NIGHT_OUT_EVENT_DATE_LABEL = "October 7";
+export const NATIONAL_NIGHT_OUT_EVENT_DATE_LABEL = "October 6";
