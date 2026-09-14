@@ -134,10 +134,5 @@ service cloud.firestore {
     match /requestTickets/{id} {
       allow read, write: if false;
     }
-
-    // Department roster is server-only (Admin SDK via /api/roster*).
-    match /rosterMembers/{id} {
-      allow read, write: if false;
-    }
   }
 }
