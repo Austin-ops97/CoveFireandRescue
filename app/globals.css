@@ -230,3 +230,33 @@ h3,
   color: var(--color-navy-900);
   background-color: #fff;
 }
+
+/* Roster print view — hide chrome, show clean table only */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .roster-print-root,
+  .roster-print-root * {
+    visibility: visible !important;
+  }
+
+  .roster-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  header,
+  nav,
+  footer,
+  aside {
+    display: none !important;
+  }
+}

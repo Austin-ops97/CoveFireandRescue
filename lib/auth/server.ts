@@ -132,6 +132,14 @@ export async function requireManageContent(request: Request): Promise<VerifiedSe
   return requireServerRole(request, MANAGE_CONTENT_ROLES);
 }
 
+export async function requireViewRoster(request: Request): Promise<VerifiedServerUser> {
+  return requireServerRole(request, DASHBOARD_ROLES);
+}
+
+export async function requireManageRoster(request: Request): Promise<VerifiedServerUser> {
+  return requireServerRole(request, MANAGE_CONTENT_ROLES);
+}
+
 export async function requireManageUsers(request: Request): Promise<VerifiedServerUser> {
   return requireServerRole(request, ["admin"]);
 }

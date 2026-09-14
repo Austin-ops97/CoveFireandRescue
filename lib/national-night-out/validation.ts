@@ -1,4 +1,5 @@
 import {
+  NNO_LEGACY_PENDING_STATUS,
   NNO_STATUSES,
   type NationalNightOutFormPayload,
   type NationalNightOutStatus,
@@ -13,6 +14,16 @@ export class NationalNightOutValidationError extends Error {
 
 function asTrimmedString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+export function normalizeNationalNightOutStatus(value: unknown): NationalNightOutStatus {
+  if (value === NNO_LEGACY_PENDING_STATUS) {
+    return "submitted";
+  }
+  if (typeof value === "string" && NNO_STATUSES.includes(value as NationalNightOutStatus)) {
+    return value as NationalNightOutStatus;
+  }
+  return "submitted";
 }
 
 export function validateNationalNightOutPayload(input: unknown): NationalNightOutFormPayload {
@@ -100,19 +111,38 @@ export function validateNationalNightOutPayload(input: unknown): NationalNightOu
 
 export function validateNationalNightOutStatusUpdate(input: unknown): {
   status: NationalNightOutStatus;
+  adminNotes?: string;
 } {
   if (!input || typeof input !== "object") {
     throw new NationalNightOutValidationError("Invalid status update payload.");
   }
 
   const payload = input as Record<string, unknown>;
-  const status = payload.status;
+  const rawStatus = payload.status;
 
-  if (typeof status !== "string" || !NNO_STATUSES.includes(status as NationalNightOutStatus)) {
-    throw new NationalNightOutValidationError("Status must be Pending, Approved, or Denied.");
+  // Accept legacy "pending" from older clients and map to submitted.
+  const status = normalizeNationalNightOutStatus(rawStatus);
+
+  if (
+    typeof rawStatus !== "string" ||
+    (rawStatus !== NNO_LEGACY_PENDING_STATUS &&
+      !NNO_STATUSES.includes(rawStatus as NationalNightOutStatus))
+  ) {
+    throw new NationalNightOutValidationError(
+      "Status must be Submitted, Under Review, Approved, or Denied."
+    );
   }
 
-  return { status: status as NationalNightOutStatus };
+  const result: { status: NationalNightOutStatus; adminNotes?: string } = { status };
+
+  if ("adminNotes" in payload) {
+    if (payload.adminNotes !== null && typeof payload.adminNotes !== "string") {
+      throw new NationalNightOutValidationError("Administrator notes must be text.");
+    }
+    result.adminNotes = asTrimmedString(payload.adminNotes).slice(0, 2000);
+  }
+
+  return result;
 }
 
 export function validateNationalNightOutSettingsUpdate(input: unknown): { enabled: boolean } {
@@ -126,6 +156,31 @@ export function validateNationalNightOutSettingsUpdate(input: unknown): { enable
   }
 
   return { enabled: payload.enabled };
+}
+
+export function validateNationalNightOutStatusLookup(input: unknown): {
+  requestId: string;
+  email: string;
+} {
+  if (!input || typeof input !== "object") {
+    throw new NationalNightOutValidationError("Invalid status lookup payload.");
+  }
+
+  const payload = input as Record<string, unknown>;
+  const requestId = asTrimmedString(payload.requestId).toUpperCase();
+  const email = asTrimmedString(payload.email).toLowerCase();
+
+  if (!requestId || requestId.length > 40 || !/^NNO-[A-Z0-9]+$/i.test(requestId)) {
+    throw new NationalNightOutValidationError(
+      "Enter a valid Request ID (for example, NNO-ABCDEF)."
+    );
+  }
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
+    throw new NationalNightOutValidationError("A valid email address is required.");
+  }
+
+  return { requestId, email };
 }
 
 export function buildNationalNightOutRequestId(docId: string): string {

@@ -8,6 +8,7 @@
 | Auth | Firebase Authentication |
 | Structured data | Cloud Firestore |
 | Large files | Backblaze B2 (server-side only) |
+| Transactional email | Resend (optional until `RESEND_API_KEY` + domain DNS are configured) |
 
 No Supabase, SQL, Prisma, Drizzle, Auth.js, or NextAuth.
 
@@ -31,6 +32,8 @@ Copy `.env.local.example` → `.env.local`.
 - Document types: `lib/firestore/types.ts`
 - Security rules: `firestore.rules`
 - `requestTickets` stores authenticated member requests, admin responses, priority, and status. All access uses server API routes so requesters cannot read other members' tickets or change admin-managed fields.
+- `rosterMembers` stores the department roster. Reads require any active dashboard role; writes require admin/editor. Client Firestore access is denied; Admin SDK APIs enforce authorization.
+- `nationalNightOutRequests` are public-submit / admin-manage via server routes. Public status lookup requires Request ID **and** matching requester email.
 
 ## Request ticket flow
 

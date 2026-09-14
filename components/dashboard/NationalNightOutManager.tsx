@@ -13,6 +13,7 @@ import {
   Select,
   SkeletonCardList,
   StatusBadge,
+  Textarea,
   type StatusVariant,
 } from "@/components/ui";
 import {
@@ -40,8 +41,10 @@ function formatDate(value: unknown): string {
 
 function statusVariant(status: NationalNightOutStatus): StatusVariant {
   switch (status) {
-    case "pending":
-      return "attention";
+    case "submitted":
+      return "info";
+    case "under_review":
+      return "warning";
     case "approved":
       return "pass";
     case "denied":
@@ -49,7 +52,15 @@ function statusVariant(status: NationalNightOutStatus): StatusVariant {
   }
 }
 
-function DetailField({ label, value, fullWidth = false }: { label: string; value: string; fullWidth?: boolean }) {
+function DetailField({
+  label,
+  value,
+  fullWidth = false,
+}: {
+  label: string;
+  value: string;
+  fullWidth?: boolean;
+}) {
   return (
     <div className={fullWidth ? "sm:col-span-2" : undefined}>
       <dt className="text-xs font-semibold uppercase tracking-wide text-brand-gray">{label}</dt>
@@ -73,6 +84,7 @@ export function NationalNightOutManager() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [adminNotesDraft, setAdminNotesDraft] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -100,6 +112,10 @@ export function NationalNightOutManager() {
     [requests, selectedId]
   );
 
+  useEffect(() => {
+    setAdminNotesDraft(selected?.adminNotes ?? "");
+  }, [selected?.id, selected?.adminNotes]);
+
   const filteredRequests = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -123,7 +139,8 @@ export function NationalNightOutManager() {
   const counts = useMemo(
     () => ({
       all: requests.length,
-      pending: requests.filter((item) => item.status === "pending").length,
+      submitted: requests.filter((item) => item.status === "submitted").length,
+      under_review: requests.filter((item) => item.status === "under_review").length,
       approved: requests.filter((item) => item.status === "approved").length,
       denied: requests.filter((item) => item.status === "denied").length,
     }),
@@ -154,9 +171,15 @@ export function NationalNightOutManager() {
     setError(null);
     setMessage(null);
     try {
-      const updated = await updateNationalNightOutRequestStatus(id, status);
+      const notes =
+        status === "denied" || adminNotesDraft.trim()
+          ? adminNotesDraft.trim()
+          : undefined;
+      const updated = await updateNationalNightOutRequestStatus(id, status, notes);
       setRequests((current) => current.map((item) => (item.id === id ? updated : item)));
-      setMessage(`${updated.requestId} marked as ${NNO_STATUS_LABELS[updated.status]}.`);
+      setMessage(
+        `${updated.requestId} marked as ${NNO_STATUS_LABELS[updated.status]}. The requester will be notified by email when mail delivery is configured.`
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update request status.");
     } finally {
@@ -204,7 +227,8 @@ export function NationalNightOutManager() {
             <h2 className="text-base font-semibold text-brand-charcoal">National Night Out Requests</h2>
             <p className="mt-1 text-sm leading-relaxed text-brand-gray">
               When enabled, the homepage banner is shown and the public can submit visit requests.
-              Existing requests remain available here when the feature is disabled.
+              Status changes email the requester. Existing requests remain available here when the
+              feature is disabled.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:items-end">
@@ -299,9 +323,34 @@ export function NationalNightOutManager() {
           <div className="mt-6 rounded-xl border border-blue-700/15 bg-blue-700/[0.03] p-4 sm:p-5">
             <h4 className="text-sm font-bold text-brand-charcoal">Review actions</h4>
             <p className="mt-1 text-xs leading-relaxed text-brand-gray">
-              Approve or deny this request. You can change the status later if it was set by mistake.
+              Changing status emails the requester. Duplicate emails are not sent when the status is
+              unchanged. Denial notes are included in the denial email when provided.
             </p>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <FormField
+              id="nno-admin-notes"
+              label="Administrator notes / denial reason"
+              hint="Optional. Included in denial emails when the request is denied."
+              className="mt-4"
+            >
+              <Textarea
+                id="nno-admin-notes"
+                rows={3}
+                value={adminNotesDraft}
+                onChange={(event) => setAdminNotesDraft(event.target.value)}
+                placeholder="Optional notes for the requester if denied"
+              />
+            </FormField>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={updatingId === selected.id || deleting || selected.status === "under_review"}
+                onClick={() => void handleStatusChange(selected.id, "under_review")}
+              >
+                {updatingId === selected.id && selected.status !== "under_review"
+                  ? "Saving…"
+                  : "Mark Under Review"}
+              </Button>
               <Button
                 type="button"
                 variant="primary"
@@ -322,14 +371,14 @@ export function NationalNightOutManager() {
                   ? "Saving…"
                   : "Deny Request"}
               </Button>
-              {selected.status !== "pending" ? (
+              {selected.status !== "submitted" ? (
                 <Button
                   type="button"
                   variant="ghost"
                   disabled={updatingId === selected.id || deleting}
-                  onClick={() => void handleStatusChange(selected.id, "pending")}
+                  onClick={() => void handleStatusChange(selected.id, "submitted")}
                 >
-                  Reset to Pending
+                  Reset to Submitted
                 </Button>
               ) : null}
             </div>
@@ -358,7 +407,7 @@ export function NationalNightOutManager() {
         <>
           <ListToolbar
             title="Submitted requests"
-            countLabel={`${filteredRequests.length} shown · ${counts.pending} pending`}
+            countLabel={`${filteredRequests.length} shown · ${counts.submitted} submitted`}
             onRefresh={() => void load()}
             refreshing={loading}
           />

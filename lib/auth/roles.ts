@@ -26,6 +26,16 @@ export function canSubmitRounds(role: string | null | undefined): boolean {
   return role === "admin" || role === "editor" || role === "member";
 }
 
+/** Any active dashboard role may view the department roster. */
+export function canViewRoster(role: string | null | undefined): boolean {
+  return canAccessDashboard(role);
+}
+
+/** Officers/admins who manage content may edit the roster. */
+export function canManageRoster(role: string | null | undefined): boolean {
+  return canManageContent(role);
+}
+
 export function roleLabel(role: UserRole): string {
   switch (role) {
     case "admin":

@@ -33,6 +33,13 @@ export const dashboardModuleGroups: ModuleGroup[] = [
         status: "active",
       },
       {
+        title: "Department Roster",
+        navLabel: "Roster",
+        description: "View, maintain, print, and export the department member roster.",
+        href: "/dashboard/roster",
+        status: "active",
+      },
+      {
         title: "Digital Rounds / Checklists",
         navLabel: "Submit checklist",
         description: "Complete apparatus, station, equipment, and custom inspection checklists.",
