@@ -119,6 +119,14 @@ As the `auditLogs` collection grows, you may want indexes for admin audit viewer
 
 - Audit writes are best-effort from API routes; no list UI yet.
 
+## Department roster
+
+`rosterMembers` is read in full (limit 200) by the authenticated roster API and sorted in memory. Unit numbers are also the document IDs, so create/update/delete by unit does not need a composite index.
+
+## National Night Out status lookup
+
+`GET` is not used. `POST /api/national-night-out/status` queries `nationalNightOutRequests` with a single equality filter on `requestId`. Firestore maintains that single-field index automatically. The email address is compared in the server after the query so a wrong email and an unknown ID return the same response.
+
 ## Other collections
 
 Document additional composite indexes here as new features ship.

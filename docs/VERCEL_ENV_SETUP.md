@@ -90,6 +90,23 @@ Required to create department mailboxes when adding portal members. Never use `N
 
 If member creation fails with an unexpected/HTML email-server response, regenerate the API token in HostGator, update `CPANEL_*` in Vercel, and redeploy.
 
+## Transactional email (server-only)
+
+National Night Out status notices are sent through the same HostGator cPanel mailbox SMTP host. Never use `NEXT_PUBLIC_` for these. See `EMAIL_DELIVERABILITY.md` before turning on live sending.
+
+| Variable | Description |
+|----------|-------------|
+| `CPANEL_EMAIL_DOMAIN` | Authenticated sending domain (already required for mailbox provisioning) |
+| `CPANEL_MAIL_HOST` | SMTP host. Defaults to `mail.<CPANEL_EMAIL_DOMAIN>` |
+| `CPANEL_MAIL_SMTP_PORT` | SMTP port. Defaults to `465` |
+| `EMAIL_SMTP_USER` | Full mailbox address used to authenticate, on `CPANEL_EMAIL_DOMAIN` |
+| `EMAIL_SMTP_PASSWORD` | Password for that mailbox |
+| `EMAIL_FROM` | Optional header From address on the same domain. Defaults to `EMAIL_SMTP_USER` |
+| `EMAIL_REPLY_TO` | Optional Reply-To. Defaults to the public department contact email |
+| `EMAIL_DELIVERY_MODE` | `log` or `send`. Outside production the default is `log` (no real email) |
+
+`GET /api/health` includes `transactionalEmailConfigured` as a boolean only.
+
 ## Verify after deploy
 
 ### Public health check (no secrets)
@@ -106,7 +123,8 @@ Example response:
   "service": "cove-fire-rescue",
   "firebaseClientConfigured": true,
   "firebaseAdminConfigured": true,
-  "b2Configured": false
+  "b2Configured": false,
+  "transactionalEmailConfigured": false
 }
 ```
 

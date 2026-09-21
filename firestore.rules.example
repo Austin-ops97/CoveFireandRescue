@@ -118,6 +118,15 @@ service cloud.firestore {
     //   allow write: if false;
     // }
 
+    // --- rosterMembers ---
+    //
+    // Private department roster. All reads and writes go through server API
+    // routes after Firebase Auth + Firestore role checks. No client access.
+    //
+    // match /rosterMembers/{id} {
+    //   allow read, write: if false;
+    // }
+
     // Default deny until rules are implemented:
     match /{document=**} {
       allow read, write: if false;

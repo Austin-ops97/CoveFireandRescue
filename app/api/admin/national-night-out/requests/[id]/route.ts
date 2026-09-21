@@ -4,6 +4,7 @@ import { writeAuditLog } from "@/lib/audit/server";
 import { requireServerRole, serverAuthErrorResponse } from "@/lib/auth/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firestore/collections";
+import { notifyNationalNightOutStatus } from "@/lib/national-night-out/notify";
 import {
   NationalNightOutValidationError,
   serializeNationalNightOutRequestDoc,
@@ -78,16 +79,28 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const previous = serializeNationalNightOutRequestDoc(existing);
+    const nextNote = validated.statusNote ?? previous.statusNote;
 
     await docRef.set(
       {
         status: validated.status,
+        statusNote: nextNote,
         updatedAt: FieldValue.serverTimestamp(),
         updatedBy: actor.uid,
         updatedByName: actor.displayName ?? actor.email ?? "Administrator",
       },
       { merge: true }
     );
+
+    const notification = await notifyNationalNightOutStatus({
+      docRef,
+      previousStatus: previous.status,
+      nextStatus: validated.status,
+      lastNotifiedStatus: previous.lastNotifiedStatus,
+      previousNote: previous.statusNote,
+      nextNote,
+      record: previous,
+    });
 
     const updated = serializeNationalNightOutRequestDoc(await docRef.get());
 
@@ -100,7 +113,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       message: `Updated ${updated.requestId} from ${NNO_STATUS_LABELS[previous.status]} to ${NNO_STATUS_LABELS[updated.status]}`,
     });
 
-    return NextResponse.json({ request: updated });
+    return NextResponse.json({ request: updated, notification });
   } catch (error) {
     if (error instanceof NationalNightOutValidationError) {
       return badRequest(error.message);

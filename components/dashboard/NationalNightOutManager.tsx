@@ -11,6 +11,7 @@ import {
   ListToolbar,
   Modal,
   Select,
+  Textarea,
   SkeletonCardList,
   StatusBadge,
   type StatusVariant,
@@ -25,6 +26,7 @@ import {
 import {
   NNO_STATUS_LABELS,
   NNO_STATUSES,
+  type NationalNightOutNotificationResult,
   type NationalNightOutRequestRecord,
   type NationalNightOutStatus,
 } from "@/lib/national-night-out/types";
@@ -41,11 +43,28 @@ function formatDate(value: unknown): string {
 function statusVariant(status: NationalNightOutStatus): StatusVariant {
   switch (status) {
     case "pending":
-      return "attention";
+      return "info";
+    case "under_review":
+      return "warning";
     case "approved":
       return "pass";
     case "denied":
       return "fail";
+  }
+}
+
+function notificationFeedback(notification: NationalNightOutNotificationResult): string {
+  switch (notification.outcome) {
+    case "sent":
+      return "The requester was emailed.";
+    case "logged":
+      return "Email was recorded locally and not sent (delivery mode is log).";
+    case "skipped":
+      return "No additional email was sent because this update was already notified.";
+    case "unconfigured":
+      return notification.message ?? "Status was saved, but outgoing email is not configured.";
+    case "failed":
+      return notification.message ?? "Status was saved, but the email could not be sent.";
   }
 }
 
@@ -73,6 +92,7 @@ export function NationalNightOutManager() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [statusNote, setStatusNote] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,15 +140,15 @@ export function NationalNightOutManager() {
     });
   }, [requests, search, statusFilter]);
 
-  const counts = useMemo(
-    () => ({
-      all: requests.length,
-      pending: requests.filter((item) => item.status === "pending").length,
-      approved: requests.filter((item) => item.status === "approved").length,
-      denied: requests.filter((item) => item.status === "denied").length,
-    }),
-    [requests]
-  );
+  const counts = useMemo(() => {
+    const byStatus = Object.fromEntries(
+      NNO_STATUSES.map((status) => [status, 0])
+    ) as Record<NationalNightOutStatus, number>;
+    for (const item of requests) {
+      byStatus[item.status] += 1;
+    }
+    return { all: requests.length, ...byStatus };
+  }, [requests]);
 
   async function handleToggleEnabled(nextEnabled: boolean) {
     setSavingSettings(true);
@@ -154,9 +174,12 @@ export function NationalNightOutManager() {
     setError(null);
     setMessage(null);
     try {
-      const updated = await updateNationalNightOutRequestStatus(id, status);
-      setRequests((current) => current.map((item) => (item.id === id ? updated : item)));
-      setMessage(`${updated.requestId} marked as ${NNO_STATUS_LABELS[updated.status]}.`);
+      const result = await updateNationalNightOutRequestStatus(id, status, statusNote);
+      setRequests((current) => current.map((item) => (item.id === id ? result.request : item)));
+      setStatusNote(result.request.statusNote);
+      setMessage(
+        `${result.request.requestId} marked as ${NNO_STATUS_LABELS[result.request.status]}. ${notificationFeedback(result.notification)}`
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update request status.");
     } finally {
@@ -288,6 +311,18 @@ export function NationalNightOutManager() {
               fullWidth
             />
             <DetailField label="Additional comments" value={selected.comments} fullWidth />
+            <DetailField label="Note to requester" value={selected.statusNote} fullWidth />
+            <DetailField
+              label="Last email status"
+              value={
+                selected.lastNotificationError
+                  ? selected.lastNotificationError
+                  : selected.lastNotifiedStatus
+                    ? `Notified: ${NNO_STATUS_LABELS[selected.lastNotifiedStatus]}`
+                    : "Not sent yet"
+              }
+              fullWidth
+            />
             <DetailField
               label="Disclaimer acknowledgement"
               value={selected.disclaimerAccepted ? "Yes — disclaimer acknowledged" : "No"}
@@ -299,28 +334,47 @@ export function NationalNightOutManager() {
           <div className="mt-6 rounded-xl border border-blue-700/15 bg-blue-700/[0.03] p-4 sm:p-5">
             <h4 className="text-sm font-bold text-brand-charcoal">Review actions</h4>
             <p className="mt-1 text-xs leading-relaxed text-brand-gray">
-              Approve or deny this request. You can change the status later if it was set by mistake.
+              Changing the status emails the requester. Saving the same status again does not send
+              another email unless the note changed or the previous email did not go out.
             </p>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <div className="mt-4">
+              <FormField
+                id="nno-status-note"
+                label="Note to requester"
+                hint="Included in the status email. For a denial, use this as the reason. It is not shown on the public status page."
+              >
+                <Textarea
+                  id="nno-status-note"
+                  value={statusNote}
+                  maxLength={2000}
+                  onChange={(event) => setStatusNote(event.target.value)}
+                />
+              </FormField>
+            </div>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={updatingId === selected.id || deleting}
+                onClick={() => void handleStatusChange(selected.id, "under_review")}
+              >
+                {updatingId === selected.id ? "Saving…" : "Mark Under Review"}
+              </Button>
               <Button
                 type="button"
                 variant="primary"
-                disabled={updatingId === selected.id || deleting || selected.status === "approved"}
+                disabled={updatingId === selected.id || deleting}
                 onClick={() => void handleStatusChange(selected.id, "approved")}
               >
-                {updatingId === selected.id && selected.status !== "approved"
-                  ? "Saving…"
-                  : "Approve Request"}
+                {updatingId === selected.id ? "Saving…" : "Approve Request"}
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                disabled={updatingId === selected.id || deleting || selected.status === "denied"}
+                disabled={updatingId === selected.id || deleting}
                 onClick={() => void handleStatusChange(selected.id, "denied")}
               >
-                {updatingId === selected.id && selected.status !== "denied"
-                  ? "Saving…"
-                  : "Deny Request"}
+                {updatingId === selected.id ? "Saving…" : "Deny Request"}
               </Button>
               {selected.status !== "pending" ? (
                 <Button
@@ -329,7 +383,7 @@ export function NationalNightOutManager() {
                   disabled={updatingId === selected.id || deleting}
                   onClick={() => void handleStatusChange(selected.id, "pending")}
                 >
-                  Reset to Pending
+                  Mark as Submitted
                 </Button>
               ) : null}
             </div>
@@ -358,7 +412,7 @@ export function NationalNightOutManager() {
         <>
           <ListToolbar
             title="Submitted requests"
-            countLabel={`${filteredRequests.length} shown · ${counts.pending} pending`}
+            countLabel={`${filteredRequests.length} shown · ${counts.pending} submitted`}
             onRefresh={() => void load()}
             refreshing={loading}
           />
@@ -412,6 +466,7 @@ export function NationalNightOutManager() {
                   onClick={() => {
                     setMessage(null);
                     setError(null);
+                    setStatusNote(request.statusNote);
                     setSelectedId(request.id);
                   }}
                   className="block w-full rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition hover:border-brand-blue/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40 sm:p-5"

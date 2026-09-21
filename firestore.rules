@@ -129,5 +129,10 @@ service cloud.firestore {
     match /requestTickets/{id} {
       allow read, write: if false;
     }
+
+    // Department roster is private. Reads and writes go through authenticated server routes.
+    match /rosterMembers/{id} {
+      allow read, write: if false;
+    }
   }
 }

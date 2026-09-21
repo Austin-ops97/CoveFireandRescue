@@ -13,6 +13,7 @@ export {
   buildNationalNightOutRequestId,
   validateNationalNightOutPayload,
   validateNationalNightOutSettingsUpdate,
+  validateNationalNightOutStatusLookup,
   validateNationalNightOutStatusUpdate,
 } from "./validation";
 
@@ -60,9 +61,21 @@ export function serializeNationalNightOutRequestDoc(
     comments: typeof data.comments === "string" ? data.comments : "",
     disclaimerAccepted: data.disclaimerAccepted === true,
     status: readStatus(data.status),
+    statusNote: typeof data.statusNote === "string" ? data.statusNote : "",
+    lastNotifiedStatus: readOptionalStatus(data.lastNotifiedStatus),
+    lastNotifiedAt: data.lastNotifiedAt ? serializeTimestamp(data.lastNotifiedAt) : null,
+    lastNotificationError:
+      typeof data.lastNotificationError === "string" ? data.lastNotificationError : null,
     createdAt: serializeTimestamp(data.createdAt),
     updatedAt: serializeTimestamp(data.updatedAt),
   };
+}
+
+function readOptionalStatus(value: unknown): NationalNightOutStatus | null {
+  if (typeof value === "string" && NNO_STATUSES.includes(value as NationalNightOutStatus)) {
+    return value as NationalNightOutStatus;
+  }
+  return null;
 }
 
 export function serializeNationalNightOutSettings(

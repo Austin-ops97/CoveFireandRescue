@@ -6,9 +6,11 @@ import {
   assertWithinNationalNightOutRateLimit,
   getClientIpFromRequest,
 } from "@/lib/national-night-out/rate-limit";
+import { notifyNationalNightOutStatus } from "@/lib/national-night-out/notify";
 import {
   NationalNightOutValidationError,
   buildNationalNightOutRequestId,
+  serializeNationalNightOutRequestDoc,
   serializeNationalNightOutSettings,
   validateNationalNightOutPayload,
 } from "@/lib/national-night-out/server";
@@ -101,14 +103,29 @@ export async function POST(request: Request) {
       comments: validated.comments ?? "",
       disclaimerAccepted: true,
       status: "pending",
+      statusNote: "",
+      lastNotifiedStatus: null,
+      lastNotificationError: null,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    const saved = serializeNationalNightOutRequestDoc(await docRef.get());
+    const notification = await notifyNationalNightOutStatus({
+      docRef,
+      previousStatus: null,
+      nextStatus: "pending",
+      lastNotifiedStatus: null,
+      previousNote: "",
+      nextNote: "",
+      record: saved,
     });
 
     return NextResponse.json(
       {
         id: docRef.id,
         requestId,
+        emailNotification: notification.outcome === "sent" ? "sent" : "not_sent",
         message:
           "Your National Night Out request has been submitted. This request does not guarantee a department visit. The department will review your request and determine availability.",
       },

@@ -71,6 +71,11 @@ export function NationalNightOutRequestPage() {
           title="Request a Department Visit"
           subtitle="Provide event details so the department can review availability."
         />
+        <div className="mb-4">
+          <Button href="/national-night-out/status" variant="outline" size="sm">
+            Check Request Status
+          </Button>
+        </div>
 
         {loading ? (
           <Card>
