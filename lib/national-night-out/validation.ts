@@ -100,6 +100,8 @@ export function validateNationalNightOutPayload(input: unknown): NationalNightOu
 
 export function validateNationalNightOutStatusUpdate(input: unknown): {
   status: NationalNightOutStatus;
+  /** Null means the caller did not include a note, so the stored note should stay. */
+  statusNote: string | null;
 } {
   if (!input || typeof input !== "object") {
     throw new NationalNightOutValidationError("Invalid status update payload.");
@@ -109,10 +111,52 @@ export function validateNationalNightOutStatusUpdate(input: unknown): {
   const status = payload.status;
 
   if (typeof status !== "string" || !NNO_STATUSES.includes(status as NationalNightOutStatus)) {
-    throw new NationalNightOutValidationError("Status must be Pending, Approved, or Denied.");
+    throw new NationalNightOutValidationError(
+      "Status must be Submitted, Under Review, Approved, or Denied."
+    );
   }
 
-  return { status: status as NationalNightOutStatus };
+  if (payload.statusNote === undefined || payload.statusNote === null) {
+    return { status: status as NationalNightOutStatus, statusNote: null };
+  }
+
+  if (typeof payload.statusNote !== "string") {
+    throw new NationalNightOutValidationError("Status note must be text.");
+  }
+
+  const statusNote = payload.statusNote.replace(/\0/g, "").trim().slice(0, 2000);
+  return { status: status as NationalNightOutStatus, statusNote };
+}
+
+export function normalizeNightOutRequestId(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+/**
+ * Missing fields are a form error. A present but unmatched pair always uses
+ * the same not-found response from the lookup route, including invalid IDs.
+ */
+export function validateNationalNightOutStatusLookup(input: unknown): {
+  requestId: string;
+  email: string;
+} {
+  if (!input || typeof input !== "object") {
+    throw new NationalNightOutValidationError("Request ID and email address are required.");
+  }
+
+  const payload = input as Record<string, unknown>;
+  const requestId = normalizeNightOutRequestId(asTrimmedString(payload.requestId));
+  const email = asTrimmedString(payload.email).toLowerCase();
+
+  if (!requestId || !email) {
+    throw new NationalNightOutValidationError("Request ID and email address are required.");
+  }
+
+  if (requestId.length > 40 || email.length > 200) {
+    throw new NationalNightOutValidationError("Request ID and email address are required.");
+  }
+
+  return { requestId, email };
 }
 
 export function validateNationalNightOutSettingsUpdate(input: unknown): { enabled: boolean } {

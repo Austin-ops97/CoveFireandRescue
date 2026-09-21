@@ -2,6 +2,7 @@
 
 import { authenticatedFetch } from "@/lib/api/client";
 import type {
+  NationalNightOutNotificationResult,
   NationalNightOutRequestRecord,
   NationalNightOutSettings,
   NationalNightOutStatus,
@@ -62,14 +63,18 @@ export async function fetchAdminNationalNightOutRequests(): Promise<NationalNigh
 
 export async function updateNationalNightOutRequestStatus(
   id: string,
-  status: NationalNightOutStatus
-): Promise<NationalNightOutRequestRecord> {
+  status: NationalNightOutStatus,
+  statusNote?: string
+): Promise<{
+  request: NationalNightOutRequestRecord;
+  notification: NationalNightOutNotificationResult;
+}> {
   const response = await authenticatedFetch(
     `/api/admin/national-night-out/requests/${encodeURIComponent(id)}`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, statusNote: statusNote ?? "" }),
     }
   );
 
@@ -77,11 +82,17 @@ export async function updateNationalNightOutRequestStatus(
     throw new Error(await readApiError(response));
   }
 
-  const data = (await response.json()) as { request?: NationalNightOutRequestRecord };
+  const data = (await response.json()) as {
+    request?: NationalNightOutRequestRecord;
+    notification?: NationalNightOutNotificationResult;
+  };
   if (!data.request) {
     throw new Error("Status was updated but no request was returned.");
   }
-  return data.request;
+  return {
+    request: data.request,
+    notification: data.notification ?? { outcome: "failed", message: "No notification result was returned." },
+  };
 }
 
 export async function deleteNationalNightOutRequest(id: string): Promise<void> {

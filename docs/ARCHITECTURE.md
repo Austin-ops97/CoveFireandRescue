@@ -11,6 +11,8 @@
 
 No Supabase, SQL, Prisma, Drizzle, Auth.js, or NextAuth.
 
+Department email mailboxes are provisioned on HostGator cPanel. Website status notices use that same authenticated SMTP mailbox (`lib/email`). There is no separate transactional provider in this repository.
+
 ## Environment
 
 Copy `.env.local.example` → `.env.local`.

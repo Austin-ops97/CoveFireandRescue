@@ -66,6 +66,7 @@ export function NationalNightOutForm() {
   const [error, setError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [successRequestId, setSuccessRequestId] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
 
   const canSubmit = useMemo(() => !submitting && form.disclaimerAccepted, [form.disclaimerAccepted, submitting]);
 
@@ -106,6 +107,7 @@ export function NationalNightOutForm() {
     try {
       const result = await submitNationalNightOutRequest(payload);
       setSuccessRequestId(result.requestId);
+      setEmailSent(result.emailNotification === "sent");
       setForm(EMPTY_FORM);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit request.");
@@ -123,8 +125,15 @@ export function NationalNightOutForm() {
           <>
             {" "}
             Your request ID is <span className="font-semibold text-brand-charcoal">{successRequestId}</span>.
+            Save it to check the status later with the email address you used.
+            {emailSent ? " A confirmation email was sent." : null}
           </>
         ) : null}
+        <div className="mt-4">
+          <Button href="/national-night-out/status" variant="outline" size="sm">
+            Check Request Status
+          </Button>
+        </div>
       </AlertBanner>
     );
   }
@@ -343,9 +352,14 @@ export function NationalNightOutForm() {
         </div>
       </div>
 
-      <Button type="submit" variant="primary" disabled={!canSubmit} className="w-full sm:w-auto">
-        {submitting ? "Submitting…" : "Submit Request"}
-      </Button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Button type="submit" variant="primary" disabled={!canSubmit} className="w-full sm:w-auto">
+          {submitting ? "Submitting…" : "Submit Request"}
+        </Button>
+        <Button href="/national-night-out/status" variant="ghost" size="sm">
+          Check Request Status
+        </Button>
+      </div>
     </form>
   );
 }

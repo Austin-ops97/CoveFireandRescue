@@ -1,6 +1,10 @@
 "use client";
 
-import type { NationalNightOutFormPayload, NationalNightOutSettings } from "./types";
+import type {
+  NationalNightOutFormPayload,
+  NationalNightOutPublicStatus,
+  NationalNightOutSettings,
+} from "./types";
 
 async function readApiError(response: Response): Promise<string> {
   try {
@@ -34,7 +38,7 @@ export async function fetchNationalNightOutSettings(): Promise<NationalNightOutS
 
 export async function submitNationalNightOutRequest(
   payload: NationalNightOutFormPayload
-): Promise<{ id: string; requestId: string }> {
+): Promise<{ id: string; requestId: string; emailNotification: "sent" | "not_sent" }> {
   const response = await fetch("/api/national-night-out/requests", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -45,10 +49,39 @@ export async function submitNationalNightOutRequest(
     throw new Error(await readApiError(response));
   }
 
-  const data = (await response.json()) as { id?: string; requestId?: string };
+  const data = (await response.json()) as {
+    id?: string;
+    requestId?: string;
+    emailNotification?: string;
+  };
   if (!data.id || !data.requestId) {
     throw new Error("Request was submitted but no confirmation id was returned.");
   }
 
-  return { id: data.id, requestId: data.requestId };
+  return {
+    id: data.id,
+    requestId: data.requestId,
+    emailNotification: data.emailNotification === "sent" ? "sent" : "not_sent",
+  };
+}
+
+export async function lookupNationalNightOutStatus(
+  requestId: string,
+  email: string
+): Promise<NationalNightOutPublicStatus> {
+  const response = await fetch("/api/national-night-out/status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ requestId, email }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+
+  const data = (await response.json()) as { status?: NationalNightOutPublicStatus };
+  if (!data.status?.requestId || !data.status.status) {
+    throw new Error("Status could not be read from the response.");
+  }
+  return data.status;
 }

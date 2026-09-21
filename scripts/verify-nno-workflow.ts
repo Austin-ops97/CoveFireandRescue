@@ -11,6 +11,9 @@ import {
   validateNationalNightOutSettingsUpdate,
   validateNationalNightOutStatusUpdate,
 } from "../lib/national-night-out/validation";
+import { shouldNotifyStatusChange } from "../lib/national-night-out/notifications";
+import { resolvePublicStatusLookup } from "../lib/national-night-out/public-status";
+import { STATUS_LOOKUP_NOT_FOUND_MESSAGE } from "../lib/national-night-out/types";
 import type {
   NationalNightOutRequestRecord,
   NationalNightOutStatus,
@@ -54,6 +57,9 @@ function submitRequest(payload: unknown) {
     comments: validated.comments ?? "",
     disclaimerAccepted: true,
     status: "pending",
+    statusNote: "",
+    lastNotifiedStatus: null,
+    lastNotificationError: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -129,6 +135,9 @@ assert(approved.status === "approved", "approved saved");
 const denied = setStatus(created.id, "denied");
 assert(denied.status === "denied", "denied saved");
 
+const reviewed = setStatus(created.id, "under_review");
+assert(reviewed.status === "under_review", "under review saved");
+
 // Disable feature — previous requests remain
 db.settings = validateNationalNightOutSettingsUpdate({ enabled: false });
 assert(db.settings.enabled === false, "disabled");
@@ -156,5 +165,35 @@ try {
 } catch (error) {
   assert(error instanceof Error && error.message === "RATE_LIMITED", "rate limited");
 }
+
+assert(
+  shouldNotifyStatusChange({
+    previousStatus: "pending",
+    nextStatus: "under_review",
+    lastNotifiedStatus: "pending",
+  }).notify,
+  "status change notifies"
+);
+assert(
+  shouldNotifyStatusChange({
+    previousStatus: "under_review",
+    nextStatus: "under_review",
+    lastNotifiedStatus: "under_review",
+  }).notify === false,
+  "duplicate status does not notify"
+);
+
+const found = resolvePublicStatusLookup({
+  record: created,
+  requestId: created.requestId,
+  email: created.email,
+});
+assert(found.ok === true, "lookup matches id and email");
+const hidden = resolvePublicStatusLookup({
+  record: created,
+  requestId: created.requestId,
+  email: "other@example.com",
+});
+assert(hidden.ok === false && hidden.message === STATUS_LOOKUP_NOT_FOUND_MESSAGE, "wrong email hidden");
 
 console.log("National Night Out workflow simulation passed.");
